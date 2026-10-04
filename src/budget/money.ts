@@ -1,3 +1,6 @@
+import { format } from "../strings/format";
+import { strings } from "../strings/he";
+
 /** Integer amount in agorot (1 ₪ = 100 agorot). */
 export type Agorot = number;
 
@@ -18,5 +21,5 @@ export function formatAgorot(amount: Agorot): string {
   const shekels = Math.floor(absolute / AGOROT_PER_SHEKEL);
   const agorot = absolute % AGOROT_PER_SHEKEL;
   const fraction = agorot === 0 ? "" : `.${String(agorot).padStart(2, "0")}`;
-  return `${sign}${groupThousands(shekels)}${fraction} ₪`;
+  return format(strings.SHEKEL_AMOUNT, { amount: `${sign}${groupThousands(shekels)}${fraction}` });
 }

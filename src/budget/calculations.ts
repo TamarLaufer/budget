@@ -1,3 +1,5 @@
+import { useMonthlyBudgetSummary } from "../hooks/useMonthlyBudgetSummary";
+import { format } from "../strings/format";
 import { strings } from "../strings/he";
 import { shekelsToAgorot, type Agorot } from "./money";
 import type {
@@ -59,5 +61,9 @@ const MONTHS_BY_INDEX: readonly string[] = [
 ];
 
 export function formatMonthYear(date: Date): string {
-  return `${MONTHS_BY_INDEX[date.getMonth()]} ${date.getFullYear()}`;
+  return format(strings.MONTH_YEAR, {
+    month: MONTHS_BY_INDEX[date.getMonth()],
+    year: date.getFullYear(),
+  });
 }
+

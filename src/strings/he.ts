@@ -20,4 +20,18 @@ export const strings = {
     ENTERTAINMENT: "בילויים",
     TRANSPORT: "תחבורה",
   },
+  TOTAL_BUDGET:"תקציב כולל",
+  EXPENSES: "הוצאות",
+  BUDGET: "תקציב",
+  BALANCE: "יתרה",
+  OVER: "חריגה",
+  OVER_BUDGET: "חריגה מהתקציב",
+  // Templates: fill the {placeholders} with format() from ./format.
+  BUDGET_USED: "נוצלו {percent}% מהתקציב החודשי",
+  OVER_BY: "חריגה של {amount}",
+  REMAINING: "נותרו {amount}",
+  PERCENT: "{percent}%",
+  MONTH_YEAR: "{month} {year}",
+  // Non-breaking space keeps the amount and ₪ on the same line.
+  SHEKEL_AMOUNT: "{amount} ₪",
 };
