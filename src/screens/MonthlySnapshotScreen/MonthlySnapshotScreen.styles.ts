@@ -18,25 +18,14 @@ export const Screen = styled.ScrollView.attrs<{ $insets: EdgeInsets }>(
   background-color: ${colors.background};
 `;
 
-export const Header = styled.View`
-  gap: ${spacing.xs}px;
-  margin-bottom: ${spacing.sm}px;
-`;
-
-export const Title = styled.Text`
-  font-size: ${fontSize.title}px;
-  font-weight: 700;
-  color: ${colors.text};
-`;
-
-export const Month = styled.Text`
-  font-size: ${fontSize.body}px;
-  color: ${colors.textMuted};
-`;
-
 export const SectionTitle = styled.Text`
   font-size: ${fontSize.heading}px;
   font-weight: 700;
   color: ${colors.text};
   margin-top: ${spacing.md}px;
 `;
+
+export const ShowAllPress = styled.Pressable`
+  background-color: ${colors.background}
+  padding: 15px;
+`

@@ -5,10 +5,11 @@ import { colors, fontSize, radius, spacing } from "../../theme";
 
 interface OverProps {
   $isOver: boolean;
+  isSelected: boolean;
 }
 
-export const Card = styled.View<OverProps>`
-  background-color: ${colors.surface};
+export const Card = styled.Pressable<OverProps>`
+  background-color: ${({isSelected})=> (isSelected ? colors.selected : colors.border)};
   border-radius: ${radius.md}px;
   border-width: ${({ $isOver }) => ($isOver ? 1 : StyleSheet.hairlineWidth)}px;
   border-color: ${({ $isOver }) => ($isOver ? colors.danger : colors.border)};
@@ -62,14 +63,14 @@ export const DetailValue = styled.Text`
   color: ${colors.text};
 `;
 
-export const Status = styled.Text<OverProps>`
+export const Status = styled.Text<Partial<OverProps>>`
   flex-shrink: 1;
   font-size: ${fontSize.body}px;
   font-weight: 700;
   color: ${({ $isOver }) => ($isOver ? colors.danger : colors.success)};
 `;
 
-export const Percent = styled.Text<OverProps>`
+export const Percent = styled.Text<Partial<OverProps>>`
   font-size: ${fontSize.caption}px;
   font-weight: 600;
   color: ${({ $isOver }) => ($isOver ? colors.danger : colors.textMuted)};

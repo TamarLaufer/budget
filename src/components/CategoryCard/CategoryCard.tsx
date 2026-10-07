@@ -1,5 +1,5 @@
 import { formatAgorot } from "../../budget/money";
-import type { CategorySummary } from "../../budget/types";
+import type { BudgetCategory, CategorySummary } from "../../budget/types";
 import { format } from "../../strings/format";
 import { strings } from "../../strings/he";
 import {
@@ -18,13 +18,15 @@ import { ProgressBar } from "../ProgressBar/ProgressBar";
 
 interface CategoryCardProps {
   category: CategorySummary;
+  onPress: ()=> void;
+  isSelected: boolean;
 }
 
-export function CategoryCard({ category }: CategoryCardProps) {
+export function CategoryCard({ category, onPress, isSelected }: CategoryCardProps) {
   const { name, budget, spent, remaining, percentUsed, fill, isOver } = category;
 
   return (
-    <Card $isOver={isOver}>
+    <Card $isOver={isOver} onPress={onPress} isSelected={isSelected}>
       <HeaderRow>
         <Name>{name}</Name>
         {isOver ? (

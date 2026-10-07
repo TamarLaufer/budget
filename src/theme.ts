@@ -9,6 +9,7 @@ export const colors = {
   danger: "#B42318",
   dangerSurface: "#FDECEA",
   track: "#E6E8EC",
+  selected: "#FCF9EA"
 } as const;
 
 export const spacing = {

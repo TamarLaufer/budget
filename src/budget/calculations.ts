@@ -1,11 +1,9 @@
-import { useMonthlyBudgetSummary } from "../hooks/useMonthlyBudgetSummary";
 import { format } from "../strings/format";
 import { strings } from "../strings/he";
-import { shekelsToAgorot, type Agorot } from "./money";
+import { type Agorot } from "./money";
 import type {
   BudgetCategory,
   BudgetUsage,
-  CategorySummary,
   MonthlySnapshot,
 } from "./types";
 
