@@ -18,6 +18,12 @@ export const Screen = styled.ScrollView.attrs<{ $insets: EdgeInsets }>(
   background-color: ${colors.background};
 `;
 
+export const SectionTitleContainer = styled.View`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+`
+
 export const SectionTitle = styled.Text`
   font-size: ${fontSize.heading}px;
   font-weight: 700;

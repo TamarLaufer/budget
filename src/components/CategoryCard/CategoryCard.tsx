@@ -1,5 +1,5 @@
 import { formatAgorot } from "../../budget/money";
-import type { BudgetCategory, CategorySummary } from "../../budget/types";
+import type { CategorySummary } from "../../budget/types";
 import { format } from "../../strings/format";
 import { strings } from "../../strings/he";
 import {
@@ -13,8 +13,10 @@ import {
   OverBadgeText,
   Percent,
   Status,
+  OverBadgeContainer
 } from "./CategoryCard.styles";
 import { ProgressBar } from "../ProgressBar/ProgressBar";
+import {useSharedValue} from 'react-native-reanimated';
 
 interface CategoryCardProps {
   category: CategorySummary;
@@ -25,15 +27,23 @@ interface CategoryCardProps {
 export function CategoryCard({ category, onPress, isSelected }: CategoryCardProps) {
   const { name, budget, spent, remaining, percentUsed, fill, isOver } = category;
 
+  const scale = useSharedValue(1)
+  console.log(scale.value, 'scale');
+  
+
   return (
     <Card $isOver={isOver} onPress={onPress} isSelected={isSelected}>
       <HeaderRow>
         <Name>{name}</Name>
+    
         {isOver ? (
-          <OverBadge>
-            <OverBadgeText>{strings.OVER_BUDGET}</OverBadgeText>
-          </OverBadge>
+          <OverBadgeContainer>
+            <OverBadge>
+              <OverBadgeText>{strings.OVER_BUDGET}</OverBadgeText>
+            </OverBadge>
+          </OverBadgeContainer>
         ) : null}
+
       </HeaderRow>
 
       <DetailRow>

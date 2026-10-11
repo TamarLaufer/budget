@@ -1,7 +1,7 @@
 import styled from "styled-components/native";
 import { colors, fontSize, spacing } from "../../theme";
 
-export const HeaderContainer = styled.Text`
+export const HeaderContainer = styled.View`
   gap: ${spacing.xs}px;
   margin-bottom: ${spacing.sm}px;
   display: flex;

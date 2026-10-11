@@ -6,7 +6,7 @@ import type { BudgetCategory } from "../../budget/types";
 import { BudgetSummary } from "../../components/BudgetSummary/BudgetSummary";
 import { CategoryCard } from "../../components/CategoryCard/CategoryCard";
 import { strings } from "../../strings/he";
-import { Screen, SectionTitle, ShowAllPress } from "./MonthlySnapshotScreen.styles";
+import { Screen, SectionTitle, ShowAllPress, SectionTitleContainer } from "./MonthlySnapshotScreen.styles";
 import { useSelectedCategory } from "../../hooks/useSelectedCategory";
 import { Text } from "react-native";
 import { formatAgorot } from "../../budget/money";
@@ -63,8 +63,9 @@ const MonthlySnapshotScreen = ({categories, month}: MonthlySnapshotScreenProps) 
 
       <BudgetSummary totals={monthlySummary.totals} />
 
+<SectionTitleContainer>
       <SectionTitle accessibilityRole="header">{strings.CATEGORIES}</SectionTitle>
-
+</SectionTitleContainer>
       {categoriesToDisplay.map((category) => (
           <CategoryCard
             key={category.id}
