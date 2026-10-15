@@ -19,7 +19,7 @@ export const Card = styled.Pressable<OverProps>`
 
 export const HeaderRow = styled.View`
   flex-direction: row;
-  align-items: flex-start;
+  align-items: space-between;
   justify-content: flex-end;
   gap: ${spacing.sm}px;
   margin-bottom: ${spacing.xs}px;
@@ -33,10 +33,8 @@ export const Name = styled.Text`
 `;
 
 export const OverBadgeContainer = styled.View`
-  display: flex;
   align-items: flex-start;
   justify-content: center;
-  background-color: red;
   flex-direction: row;
 `
 
@@ -54,6 +52,7 @@ export const OverBadgeText = styled.Text`
 `;
 
 export const DetailRow = styled.View`
+
   flex-direction: row;
   align-items: center;
   justify-content: space-between;

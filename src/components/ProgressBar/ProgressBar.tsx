@@ -4,7 +4,7 @@ import { strings } from "../../strings/he";
 import { Fill, Track } from "./ProgressBar.styles";
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from "react-native-reanimated";
 
-interface ProgressBarProps {
+interface ProgressBarPropsType {
   /** Fill between 0 and 1. */
   fill: number;
   /** Percent shown to screen readers; may exceed 100. */
@@ -14,16 +14,17 @@ interface ProgressBarProps {
 
 const AnimatedFill = Animated.createAnimatedComponent(Fill);
 
-export function ProgressBar({ fill, percentUsed, isOver }: ProgressBarProps) {
+export function ProgressBar({ fill, percentUsed, isOver }: ProgressBarPropsType) {
 
-  const animatedFill  = useSharedValue(0)
+  const animatedFill  = useSharedValue(0);
+
   const animatedStyle = useAnimatedStyle(() => {
     return {
       width: `${animatedFill.value * 100}%`,
     };
   });
 
-    useEffect(() => {
+  useEffect(() => {
     animatedFill.value = withTiming(fill, {
       duration: 700,
     });

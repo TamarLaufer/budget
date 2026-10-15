@@ -6,6 +6,7 @@ import {
 
 import { sampleCategories } from "./src/budget/sampleData";
 import MonthlySnapshotScreen from "./src/screens/MonthlySnapshotScreen/MonthlySnapshotScreen";
+import RangeMergePracticeScreen from "./src/components/src/screens/RangeMergePracticeScreen";
 
 export default function App() {
   return (
@@ -16,7 +17,8 @@ export default function App() {
         <MonthlySnapshotScreen
           categories={sampleCategories}
           month={new Date()}
-        />
+          />
+          
       </SafeAreaView>
     </SafeAreaProvider>
   );

@@ -16,7 +16,8 @@ import {
   OverBadgeContainer
 } from "./CategoryCard.styles";
 import { ProgressBar } from "../ProgressBar/ProgressBar";
-import {useSharedValue} from 'react-native-reanimated';
+import Animated, {useAnimatedStyle, useSharedValue, withSequence, withTiming} from 'react-native-reanimated';
+import { useEffect } from "react";
 
 interface CategoryCardProps {
   category: CategorySummary;
@@ -24,15 +25,40 @@ interface CategoryCardProps {
   isSelected: boolean;
 }
 
+const AnimatedCard = Animated.createAnimatedComponent(Card);
+
 export function CategoryCard({ category, onPress, isSelected }: CategoryCardProps) {
   const { name, budget, spent, remaining, percentUsed, fill, isOver } = category;
 
   const scale = useSharedValue(1)
-  console.log(scale.value, 'scale');
+  const elevation = useSharedValue(0);
+  const position = useSharedValue(0);
+
+  const animatedStyle = useAnimatedStyle(() => {
+  return {
+    transform: [{ scale: scale.value}, {translateX: position.value }],
+    elevation: elevation.value,
+  };
+});
   
+useEffect(() => {
+  scale.value = withTiming(isSelected ? 1.04 : 1, {
+    duration: 230,
+  }),
+
+  elevation.value = withTiming(isSelected ? 8 : 0, {
+    duration: 180, 
+  });
+
+  position.value = withTiming(isSelected ? 8 : 0, {
+    duration: 230,
+  });
+
+}, [isSelected]);
+
 
   return (
-    <Card $isOver={isOver} onPress={onPress} isSelected={isSelected}>
+    <AnimatedCard $isOver={isOver} onPress={onPress} isSelected={isSelected} style={animatedStyle}>
       <HeaderRow>
         <Name>{name}</Name>
     
@@ -65,6 +91,6 @@ export function CategoryCard({ category, onPress, isSelected }: CategoryCardProp
         </Status>
         <Percent $isOver={isOver}>{format(strings.PERCENT, { percent: percentUsed })}</Percent>
       </DetailRow>
-    </Card>
+    </AnimatedCard>
   );
 }

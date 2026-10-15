@@ -9,13 +9,12 @@ export const Track = styled.View`
   overflow: hidden;
 `;
 
-interface FillProps {
+interface FillPropsType {
   $isOver: boolean;
 }
 
-export const Fill = styled.View<FillProps>`
+export const Fill = styled.View<FillPropsType>`
   height: 100%;
   border-radius: ${radius.pill}px;
-  background-color: ${({ $isOver }) =>
-    $isOver ? colors.danger : colors.primary};
+  background-color: ${({ $isOver }) => $isOver ? colors.danger : colors.primary};
 `;

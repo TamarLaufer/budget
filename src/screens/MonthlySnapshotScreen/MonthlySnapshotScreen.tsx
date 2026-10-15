@@ -11,6 +11,7 @@ import { useSelectedCategory } from "../../hooks/useSelectedCategory";
 import { Text } from "react-native";
 import { formatAgorot } from "../../budget/money";
 import Header from "../../components/Header/Header";
+import RangeMergePracticeScreen from "../../components/src/screens/RangeMergePracticeScreen";
 
 interface MonthlySnapshotScreenProps {
   categories: BudgetCategory[];
@@ -54,7 +55,7 @@ const MonthlySnapshotScreen = ({categories, month}: MonthlySnapshotScreenProps) 
   return (
     <Screen $insets={insets}>
       <Header month={month}/>
-
+      <RangeMergePracticeScreen/>
       <ShowAllPress onPress={toggleCategories}>
         <Text>
           {toggleOverBudget ? "Show all" : "Show over budget only"}
@@ -63,9 +64,9 @@ const MonthlySnapshotScreen = ({categories, month}: MonthlySnapshotScreenProps) 
 
       <BudgetSummary totals={monthlySummary.totals} />
 
-<SectionTitleContainer>
-      <SectionTitle accessibilityRole="header">{strings.CATEGORIES}</SectionTitle>
-</SectionTitleContainer>
+      <SectionTitleContainer>
+            <SectionTitle accessibilityRole="header">{strings.CATEGORIES}</SectionTitle>
+      </SectionTitleContainer>
       {categoriesToDisplay.map((category) => (
           <CategoryCard
             key={category.id}
