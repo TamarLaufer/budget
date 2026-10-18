@@ -20,7 +20,7 @@ export const strings = {
     ENTERTAINMENT: "בילויים",
     TRANSPORT: "תחבורה",
   },
-  TOTAL_BUDGET:"תקציב כולל",
+  TOTAL_BUDGET: "תקציב כולל",
   EXPENSES: "הוצאות",
   BUDGET: "תקציב",
   BALANCE: "יתרה",
@@ -34,4 +34,6 @@ export const strings = {
   MONTH_YEAR: "{month} {year}",
   // Non-breaking space keeps the amount and ₪ on the same line.
   SHEKEL_AMOUNT: "{amount} ₪",
+  SHOW_ALL: "הצג את כל הקטגוריות",
+  SHOW_OVER_BUDGET_ONLY: "הצג את הקטגוריות שבחריגה",
 };

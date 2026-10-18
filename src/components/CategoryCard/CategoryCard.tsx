@@ -13,55 +13,66 @@ import {
   OverBadgeText,
   Percent,
   Status,
-  OverBadgeContainer
+  OverBadgeContainer,
 } from "./CategoryCard.styles";
 import { ProgressBar } from "../ProgressBar/ProgressBar";
-import Animated, {useAnimatedStyle, useSharedValue, withSequence, withTiming} from 'react-native-reanimated';
-import { useEffect } from "react";
+import Animated, {
+  useAnimatedStyle,
+  useDerivedValue,
+  withTiming,
+} from "react-native-reanimated";
 
 interface CategoryCardProps {
   category: CategorySummary;
-  onPress: ()=> void;
+  onPress: () => void;
   isSelected: boolean;
 }
 
 const AnimatedCard = Animated.createAnimatedComponent(Card);
 
-export function CategoryCard({ category, onPress, isSelected }: CategoryCardProps) {
-  const { name, budget, spent, remaining, percentUsed, fill, isOver } = category;
+export function CategoryCard({
+  category,
+  onPress,
+  isSelected,
+}: CategoryCardProps) {
+  const { name, budget, spent, remaining, percentUsed, fill, isOver } =
+    category;
 
-  const scale = useSharedValue(1)
-  const elevation = useSharedValue(0);
-  const position = useSharedValue(0);
+  const scale = useDerivedValue(() =>
+    withTiming(isSelected ? 1.04 : 1, {
+      duration: 230,
+    }),
+  );
+
+  const elevation = useDerivedValue(() => {
+    return withTiming(isSelected ? 8 : 0, {
+      duration: 230,
+    });
+  });
+
+  const position = useDerivedValue(() => {
+    return withTiming(isSelected ? 8 : 0, {
+      duration: 230,
+    });
+  });
 
   const animatedStyle = useAnimatedStyle(() => {
-  return {
-    transform: [{ scale: scale.value}, {translateX: position.value }],
-    elevation: elevation.value,
-  };
-});
-  
-useEffect(() => {
-  scale.value = withTiming(isSelected ? 1.04 : 1, {
-    duration: 230,
-  }),
-
-  elevation.value = withTiming(isSelected ? 8 : 0, {
-    duration: 180, 
+    return {
+      transform: [{ scale: scale.value }, { translateX: position.value }],
+      elevation: elevation.value,
+    };
   });
-
-  position.value = withTiming(isSelected ? 8 : 0, {
-    duration: 230,
-  });
-
-}, [isSelected]);
-
 
   return (
-    <AnimatedCard $isOver={isOver} onPress={onPress} isSelected={isSelected} style={animatedStyle}>
+    <AnimatedCard
+      $isOver={isOver}
+      onPress={onPress}
+      $isSelected={isSelected}
+      style={animatedStyle}
+    >
       <HeaderRow>
         <Name>{name}</Name>
-    
+
         {isOver ? (
           <OverBadgeContainer>
             <OverBadge>
@@ -69,7 +80,6 @@ useEffect(() => {
             </OverBadge>
           </OverBadgeContainer>
         ) : null}
-
       </HeaderRow>
 
       <DetailRow>
@@ -89,7 +99,9 @@ useEffect(() => {
             ? format(strings.OVER_BY, { amount: formatAgorot(-remaining) })
             : format(strings.REMAINING, { amount: formatAgorot(remaining) })}
         </Status>
-        <Percent $isOver={isOver}>{format(strings.PERCENT, { percent: percentUsed })}</Percent>
+        <Percent $isOver={isOver}>
+          {format(strings.PERCENT, { percent: percentUsed })}
+        </Percent>
       </DetailRow>
     </AnimatedCard>
   );

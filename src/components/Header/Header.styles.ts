@@ -1,4 +1,4 @@
-import styled from "styled-components/native";
+import { styled } from "styled-components/native";
 import { colors, fontSize, spacing } from "../../theme";
 
 export const HeaderContainer = styled.View`

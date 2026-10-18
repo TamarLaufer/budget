@@ -5,11 +5,12 @@ import { colors, fontSize, radius, spacing } from "../../theme";
 
 interface OverProps {
   $isOver: boolean;
-  isSelected: boolean;
+  $isSelected: boolean;
 }
 
 export const Card = styled.Pressable<OverProps>`
-  background-color: ${({isSelected})=> (isSelected ? colors.selected : colors.border)};
+  background-color: ${({ $isSelected }) =>
+    $isSelected ? colors.selected : colors.border};
   border-radius: ${radius.md}px;
   border-width: ${({ $isOver }) => ($isOver ? 1 : StyleSheet.hairlineWidth)}px;
   border-color: ${({ $isOver }) => ($isOver ? colors.danger : colors.border)};
@@ -36,7 +37,7 @@ export const OverBadgeContainer = styled.View`
   align-items: flex-start;
   justify-content: center;
   flex-direction: row;
-`
+`;
 
 export const OverBadge = styled.View`
   background-color: ${colors.dangerSurface};
@@ -52,7 +53,6 @@ export const OverBadgeText = styled.Text`
 `;
 
 export const DetailRow = styled.View`
-
   flex-direction: row;
   align-items: center;
   justify-content: space-between;

@@ -9,7 +9,9 @@ export const colors = {
   danger: "#B42318",
   dangerSurface: "#FDECEA",
   track: "#E6E8EC",
-  selected: "#FCF9EA"
+  selected: "#FCF9EA",
+  pink: "#D8A2A2",
+  offwhite: "#EAE2D6",
 } as const;
 
 export const spacing = {
@@ -31,5 +33,6 @@ export const fontSize = {
   body: 16,
   value: 18,
   heading: 20,
+  secondHeading: 24,
   title: 28,
 } as const;
