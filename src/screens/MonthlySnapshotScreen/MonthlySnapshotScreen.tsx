@@ -13,10 +13,11 @@ import {
   SectionTitleContainer,
 } from "./MonthlySnapshotScreen.styles";
 import { useSelectedCategory } from "../../hooks/useSelectedCategory";
-import { Text } from "react-native";
+import { Text, View } from "react-native";
 import { formatAgorot } from "../../budget/money";
 import Header from "../../components/Header/Header";
-import RangeMergePracticeScreen from "../../components/src/screens/RangeMergePracticeScreen";
+import RangeMergePracticeScreen from "../../components/src/screens/RangeMergePracticeScreen/RangeMergePracticeScreen";
+import TogglePracticeScreen from "../../components/src/screens/TogglePracticeScreen/TogglePracticeScreen";
 
 interface MonthlySnapshotScreenProps {
   categories: BudgetCategory[];
@@ -72,7 +73,8 @@ const MonthlySnapshotScreen = ({
   return (
     <Screen $insets={insets}>
       <Header month={month} />
-      <RangeMergePracticeScreen />
+        <RangeMergePracticeScreen />
+        <TogglePracticeScreen/>
       <ShowAllPress onPress={toggleCategories}>
         <Text>{toggleOverBudget ? "Show all" : "Show over budget only"}</Text>
       </ShowAllPress>

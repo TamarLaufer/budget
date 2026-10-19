@@ -6,6 +6,10 @@ type CirclePropsType = {
     $circleSize: number,
 };
 
+type ContainerPropsType = {
+    gap: number,
+}
+
 export const CircleContainer = styled.View`
     justify-content: center;
     align-items: center;
@@ -18,9 +22,15 @@ export const Circle = styled.Pressable<CirclePropsType>`
     background-color: ${({$inRange})=> $inRange ? "tomato" : "green"};
     justify-content: center;
     align-items: center;
-
 `
 
 export const CircleText = styled.Text`
     font-size: 18px;
+`
+export const RangeContainer = styled.View<ContainerPropsType>`
+align-items: center;
+justify-content: center;
+flex-direction: row;
+padding: 30px;
+gap: ${({gap})=>gap}px;
 `

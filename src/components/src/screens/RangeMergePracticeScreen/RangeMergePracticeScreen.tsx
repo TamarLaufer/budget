@@ -1,5 +1,4 @@
-import { View } from 'react-native'
-import { Circle, CircleContainer, CircleText } from './RangeMergePracticeScreen.styles';
+import { Circle, CircleContainer, CircleText, RangeContainer } from './RangeMergePracticeScreen.styles';
 import Animated, { useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 const RangeMergePracticeScreen = () => {
@@ -18,17 +17,6 @@ const RangeMergePracticeScreen = () => {
   const capsuleVisibility = useSharedValue(0);
   const step = gap + circleSize;
 
-  const animatedStyle = useAnimatedStyle(() => {
-    return {
-      transform: [
-        {translateX: capsuleX.value}, 
-      ],
-      opacity: capsuleVisibility.value,
-      backgroundColor: "pink",
-      width: capsuleWidth.value,
-    }
-  });
-
   const resetSelections =   ()=>{
     selectedStartIndex.value = null;
     selectedEndIndex.value = null;
@@ -36,6 +24,18 @@ const RangeMergePracticeScreen = () => {
     capsuleWidth.value = circleSize;
     capsuleVisibility.value = 0;
   }
+
+  const animatedStyle = useAnimatedStyle(() => {
+    return {
+      transform: [
+        {translateX: capsuleX.value}, 
+      ],
+      opacity: capsuleVisibility.value,
+      backgroundColor: "orange",
+      width: capsuleWidth.value,
+    }
+  });
+
 
 
   const onCirclePress = (userSelection: number)=>{
@@ -47,7 +47,7 @@ const RangeMergePracticeScreen = () => {
       capsuleX.value = withTiming(targeX,{
           duration: 0,
       })
-      capsuleVisibility.value = withTiming(1,{
+      capsuleVisibility.value = withTiming(0.7,{
         duration: 0,
       })
 
@@ -88,8 +88,7 @@ const RangeMergePracticeScreen = () => {
   
 
   return (
-    <View style={{alignItems: "center", justifyContent: 'center', flexDirection: "row", padding: 30, gap}}>
-          
+    <RangeContainer gap={gap}>
         <Animated.View pointerEvents="none" style={[
           {
           width: circleSize,
@@ -108,7 +107,7 @@ const RangeMergePracticeScreen = () => {
             <Circle onPress={()=>onCirclePress(circle)} $circleSize={circleSize} $inRange={inRange}><CircleText>{circle}</CircleText></Circle>
         </CircleContainer>)
       })}
-    </View>
+    </RangeContainer>
   )
 }
 
