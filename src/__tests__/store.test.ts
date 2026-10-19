@@ -1,0 +1,216 @@
+import { createStore, rootReducer } from "../store";
+import {
+  selectAppPhase,
+  selectBudgetsForPeriod,
+  selectCanManage,
+  selectDashboard,
+  selectPeriodLoad,
+  selectTransactionsForPeriod,
+} from "../store/selectors";
+import { householdChanged, sessionEnded } from "../store/shared";
+import { firebaseUserChanged, loadMe } from "../store/slices/authSlice";
+import { fetchMonthBudgets, upsertBudget } from "../store/slices/budgetsSlice";
+import { fetchCategories } from "../store/slices/catalogSlices";
+import { createHousehold, leaveHousehold } from "../store/slices/householdSlice";
+import { periodSelected, periodShifted } from "../store/slices/periodSlice";
+import {
+  createTransaction,
+  deleteTransaction,
+  fetchMonthTransactions,
+  updateTransaction,
+} from "../store/slices/transactionsSlice";
+import { fulfilled, makeBudget, makeCategory, makeTransaction, meWithHousehold } from "../test-utils/fixtures";
+
+const october = { year: 2026, month: 10 };
+const september = { year: 2026, month: 9 };
+
+function storeAtOctober() {
+  const store = createStore();
+  store.dispatch(periodSelected(october));
+  return store;
+}
+
+describe("transactions reducer", () => {
+  it("adds the server's created transaction without refetching", () => {
+    const store = storeAtOctober();
+    const tx = makeTransaction();
+    store.dispatch(fulfilled(createTransaction, tx, {}));
+    expect(selectTransactionsForPeriod(store.getState())).toEqual([tx]);
+  });
+
+  it("replaces an updated transaction and removes a deleted one", () => {
+    const store = storeAtOctober();
+    const tx = makeTransaction({ amountAgorot: 100 });
+    store.dispatch(fulfilled(createTransaction, tx, {}));
+    store.dispatch(fulfilled(updateTransaction, { ...tx, amountAgorot: 999 }, { id: tx.id, changes: {} }));
+    expect(selectTransactionsForPeriod(store.getState())[0]?.amountAgorot).toBe(999);
+
+    store.dispatch(fulfilled(deleteTransaction, undefined, tx.id));
+    expect(selectTransactionsForPeriod(store.getState())).toEqual([]);
+  });
+
+  it("refetching a month replaces that month only", () => {
+    const store = storeAtOctober();
+    const septTx = makeTransaction({ transactionDate: "2026-09-20" });
+    const deletedElsewhere = makeTransaction({ transactionDate: "2026-10-05" });
+    store.dispatch(fulfilled(fetchMonthTransactions, [septTx], september));
+    store.dispatch(fulfilled(fetchMonthTransactions, [deletedElsewhere], october));
+
+    const fresh = makeTransaction({ transactionDate: "2026-10-06" });
+    store.dispatch(fulfilled(fetchMonthTransactions, [fresh], october));
+
+    expect(selectTransactionsForPeriod(store.getState()).map((t) => t.id)).toEqual([fresh.id]);
+    store.dispatch(periodSelected(september));
+    expect(selectTransactionsForPeriod(store.getState()).map((t) => t.id)).toEqual([septTx.id]);
+  });
+
+  it("sorts newest first", () => {
+    const store = storeAtOctober();
+    const a = makeTransaction({ transactionDate: "2026-10-01" });
+    const b = makeTransaction({ transactionDate: "2026-10-20" });
+    store.dispatch(fulfilled(fetchMonthTransactions, [a, b], october));
+    expect(selectTransactionsForPeriod(store.getState()).map((t) => t.id)).toEqual([b.id, a.id]);
+  });
+});
+
+describe("dashboard selector", () => {
+  function seeded() {
+    const store = storeAtOctober();
+    const food = makeCategory({ id: "food", name: "Food" });
+    store.dispatch(fulfilled(fetchCategories, [food], undefined));
+    store.dispatch(fulfilled(fetchMonthBudgets, [makeBudget({ categoryId: "food", year: 2026, month: 9, amountAgorot: 50_000 })], september));
+    store.dispatch(fulfilled(fetchMonthBudgets, [makeBudget({ categoryId: "food", amountAgorot: 100_000 })], october));
+    store.dispatch(
+      fulfilled(fetchMonthTransactions, [makeTransaction({ transactionDate: "2026-09-15", amountAgorot: 70_000 })], september),
+    );
+    store.dispatch(
+      fulfilled(
+        fetchMonthTransactions,
+        [
+          makeTransaction({ amountAgorot: 120_000 }),
+          makeTransaction({ type: "INCOME", categoryId: null, amountAgorot: 1_000_000 }),
+        ],
+        october,
+      ),
+    );
+    return store;
+  }
+
+  it("derives category spending from the selected month's transactions", () => {
+    const store = seeded();
+    const { snapshot, totalIncome, net } = selectDashboard(store.getState());
+    expect(snapshot.categories[0]).toMatchObject({ budget: 100_000, spent: 120_000, remaining: -20_000, percentUsed: 120, fill: 1, isOver: true });
+    expect(totalIncome).toBe(1_000_000);
+    expect(net).toBe(880_000);
+  });
+
+  it("September transactions and budgets do not affect October", () => {
+    const store = seeded();
+    store.dispatch(periodShifted(-1));
+    const sept = selectDashboard(store.getState()).snapshot.categories[0];
+    expect(sept).toMatchObject({ budget: 50_000, spent: 70_000, isOver: true });
+
+    store.dispatch(periodShifted(1));
+    expect(selectDashboard(store.getState()).snapshot.categories[0]).toMatchObject({ budget: 100_000, spent: 120_000 });
+  });
+
+  it("changing October's budget leaves September's untouched", () => {
+    const store = seeded();
+    const octBudget = selectBudgetsForPeriod(store.getState())[0]!;
+    store.dispatch(fulfilled(upsertBudget, { ...octBudget, amountAgorot: 200_000 }, {}));
+
+    expect(selectDashboard(store.getState()).snapshot.totals.budget).toBe(200_000);
+    store.dispatch(periodSelected(september));
+    expect(selectDashboard(store.getState()).snapshot.totals.budget).toBe(50_000);
+  });
+
+  it("dashboard updates immediately after adding an expense", () => {
+    const store = seeded();
+    store.dispatch(fulfilled(createTransaction, makeTransaction({ amountAgorot: 5_000 }), {}));
+    expect(selectDashboard(store.getState()).snapshot.totals.spent).toBe(125_000);
+  });
+
+  it("is memoized: same input state returns the same object", () => {
+    const state = seeded().getState();
+    expect(selectDashboard(state)).toBe(selectDashboard(state));
+  });
+});
+
+describe("load state", () => {
+  it("is loaded only when transactions, budgets and categories are all in", () => {
+    const store = storeAtOctober();
+    expect(selectPeriodLoad(store.getState()).loaded).toBe(false);
+    store.dispatch(fulfilled(fetchMonthTransactions, [], october));
+    store.dispatch(fulfilled(fetchMonthBudgets, [], october));
+    expect(selectPeriodLoad(store.getState()).loaded).toBe(false);
+    store.dispatch(fulfilled(fetchCategories, [], undefined));
+    expect(selectPeriodLoad(store.getState())).toEqual({ status: "succeeded", error: null, loaded: true });
+  });
+
+  it("keeps data marked as loaded while a refetch fails", () => {
+    const store = storeAtOctober();
+    store.dispatch(fulfilled(fetchMonthTransactions, [], october));
+    store.dispatch(fulfilled(fetchMonthBudgets, [], october));
+    store.dispatch(fulfilled(fetchCategories, [], undefined));
+    store.dispatch({
+      type: fetchMonthTransactions.rejected.type,
+      payload: { status: 0, code: "NETWORK_ERROR", message: "offline" },
+      meta: { arg: october, requestId: "x", requestStatus: "rejected", rejectedWithValue: true, aborted: false, condition: false },
+      error: {},
+    });
+    expect(selectPeriodLoad(store.getState())).toMatchObject({ status: "failed", loaded: true, error: { code: "NETWORK_ERROR" } });
+  });
+});
+
+describe("session and household state", () => {
+  it("walks through the app phases", () => {
+    const store = createStore();
+    expect(selectAppPhase(store.getState())).toBe("initializing");
+    store.dispatch(firebaseUserChanged(null));
+    expect(selectAppPhase(store.getState())).toBe("signedOut");
+    store.dispatch(firebaseUserChanged({ uid: "u", email: "a@example.com", emailVerified: true }));
+    expect(selectAppPhase(store.getState())).toBe("loadingProfile");
+    store.dispatch(fulfilled(loadMe, { ...meWithHousehold, membership: null }, undefined));
+    expect(selectAppPhase(store.getState())).toBe("onboarding");
+    store.dispatch(fulfilled(createHousehold, meWithHousehold.membership, { name: "Home" }));
+    expect(selectAppPhase(store.getState())).toBe("ready");
+    expect(selectCanManage(store.getState())).toBe(true);
+    store.dispatch(fulfilled(leaveHousehold, undefined, "member-id"));
+    expect(selectAppPhase(store.getState())).toBe("onboarding");
+  });
+
+  it("reports a profile error when /me fails", () => {
+    const store = createStore();
+    store.dispatch(firebaseUserChanged({ uid: "u", email: null, emailVerified: false }));
+    store.dispatch({ type: loadMe.rejected.type, payload: { status: 0, code: "NETWORK_ERROR", message: "" }, meta: { arg: undefined } });
+    expect(selectAppPhase(store.getState())).toBe("profileError");
+  });
+
+  it("MEMBER cannot manage", () => {
+    const store = createStore();
+    store.dispatch(fulfilled(loadMe, { ...meWithHousehold, membership: { ...meWithHousehold.membership!, role: "MEMBER" } }, undefined));
+    expect(selectCanManage(store.getState())).toBe(false);
+  });
+
+  it("sign-out clears every slice so the next account sees nothing from the previous one", () => {
+    const store = storeAtOctober();
+    store.dispatch(firebaseUserChanged({ uid: "u", email: "a@example.com", emailVerified: true }));
+    store.dispatch(fulfilled(loadMe, meWithHousehold, undefined));
+    store.dispatch(fulfilled(createTransaction, makeTransaction(), {}));
+    store.dispatch(fulfilled(fetchCategories, [makeCategory()], undefined));
+
+    store.dispatch(sessionEnded());
+    const state = store.getState();
+    expect(state.auth).toMatchObject({ status: "signedOut", me: null, firebaseUser: null });
+    expect(state.transactions.ids).toEqual([]);
+    expect(state.categories.ids).toEqual([]);
+  });
+
+  it("changing household clears household data but keeps the session", () => {
+    const state0 = rootReducer(undefined, fulfilled(loadMe, meWithHousehold, undefined));
+    const state1 = rootReducer(state0, fulfilled(createTransaction, makeTransaction(), {}));
+    const state2 = rootReducer(state1, householdChanged());
+    expect(state2.transactions.ids).toEqual([]);
+    expect(state2.auth.me).toEqual(meWithHousehold);
+  });
+});

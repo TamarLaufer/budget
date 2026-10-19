@@ -1,22 +1,6 @@
-import type { EdgeInsets } from "react-native-safe-area-context";
 import { styled } from "styled-components/native";
 
-import { colors, fontSize, spacing } from "../../theme";
-
-export const Screen = styled.ScrollView.attrs<{ $insets: EdgeInsets }>(
-  ({ $insets }) => ({
-    contentContainerStyle: {
-      gap: spacing.md,
-      paddingTop: $insets.top + spacing.lg,
-      paddingBottom: $insets.bottom + spacing.xl,
-      paddingLeft: $insets.left + spacing.lg,
-      paddingRight: $insets.right + spacing.lg,
-    },
-  }),
-)`
-  flex: 1;
-  background-color: ${colors.background};
-`;
+import { colors, fontSize, radius, spacing } from "../../theme";
 
 export const SectionTitleContainer = styled.View`
   display: flex;
@@ -32,17 +16,13 @@ export const SectionTitle = styled.Text`
   padding-end: 10px;
 `;
 
-export const ContainerSection = styled.View`
-  justify-content: center;
-  align-items: flex-end;
-`;
-
 export const ShowAllPress = styled.Pressable`
   background-color: ${colors.offwhite};
-  padding: 8px;
+  padding: ${spacing.sm}px;
   border-radius: 25px;
   display: flex;
   width: 60%;
+  align-self: center;
   justify-content: center;
   align-items: center;
 `;
@@ -50,4 +30,25 @@ export const ShowAllPress = styled.Pressable`
 export const ShowAllText = styled.Text`
   font-size: ${fontSize.caption}px;
   color: ${colors.text};
+`;
+
+export const IncomeRow = styled.View`
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-around;
+  background-color: ${colors.surface};
+  border-radius: ${radius.md}px;
+  padding: ${spacing.md}px;
+  gap: ${spacing.xs}px;
+`;
+
+export const IncomeLabel = styled.Text`
+  font-size: ${fontSize.caption}px;
+  color: ${colors.textMuted};
+`;
+
+export const IncomeValue = styled.Text<{ $color: string }>`
+  font-size: ${fontSize.body}px;
+  font-weight: 700;
+  color: ${({ $color }) => $color};
 `;

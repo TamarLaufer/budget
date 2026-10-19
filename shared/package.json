@@ -1,0 +1,5 @@
+{
+  "name": "budget-shared",
+  "private": true,
+  "type": "module"
+}

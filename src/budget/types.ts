@@ -1,10 +1,13 @@
 import type { Agorot } from "./money";
 
+/** A category's budget and spending for one month: the input to the usage calculations. */
 export interface BudgetCategory {
   id: string;
   name: string;
   budget: Agorot;
   spent: Agorot;
+  /** False for deactivated categories still shown because the month has data for them. */
+  isActive: boolean;
 }
 
 export interface BudgetUsage {
@@ -24,4 +27,12 @@ export type CategorySummary = BudgetCategory & BudgetUsage;
 export interface MonthlySnapshot {
   totals: BudgetUsage;
   categories: CategorySummary[];
+}
+
+export interface MonthlyDashboard {
+  snapshot: MonthlySnapshot;
+  totalIncome: Agorot;
+  /** income - expenses for the month. */
+  net: Agorot;
+  transactionCount: number;
 }

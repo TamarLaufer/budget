@@ -1,13 +1,15 @@
 {
   "expo": {
-    "name": "budget",
-    "slug": "budget",
+    "name": "Spendo",
+    "slug": "spendo",
+    "scheme": "spendo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.tamarlaufer.spendo"
     },
     "android": {
       "adaptiveIcon": {
@@ -17,10 +19,18 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "predictiveBackGestureEnabled": false,
-      "package": "com.anonymous.budget"
+      "package": "com.tamarlaufer.spendo",
+      "versionCode": 1
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      ["expo-localization", { "supportsRTL": true, "forcesRTL": true }]
+    ],
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }

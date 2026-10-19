@@ -1,20 +1,20 @@
-import { useState } from "react"
-import { BudgetCategory } from "../budget/types"
+import { useState } from "react";
 
-export const useSelectedCategory = (categories: BudgetCategory[])=>{
-  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null)
-  
-  const categorySetState = (categoryId: string | null) =>{
-    setSelectedCategoryId(categoryId)
-  }
+/** UI-only selection state for the dashboard's category cards. */
+export const useSelectedCategory = () => {
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
-  const clearSelectedId = ()=>{
-    setSelectedCategoryId(null)
-  }
+  const categorySetState = (categoryId: string | null) => {
+    setSelectedCategoryId(categoryId);
+  };
+
+  const clearSelectedId = () => {
+    setSelectedCategoryId(null);
+  };
 
   return {
     selectedCategoryId,
     categorySetState,
-    clearSelectedId
-  }
-}
+    clearSelectedId,
+  };
+};

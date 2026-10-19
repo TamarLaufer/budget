@@ -13,6 +13,7 @@ interface ProgressBarPropsType {
 }
 
 const AnimatedFill = Animated.createAnimatedComponent(Fill);
+const FILL_ANIMATION_MS = 700;
 
 export function ProgressBar({ fill, percentUsed, isOver }: ProgressBarPropsType) {
 
@@ -24,11 +25,10 @@ export function ProgressBar({ fill, percentUsed, isOver }: ProgressBarPropsType)
     };
   });
 
+  // Animation state only: the financial value itself comes from props (Redux selectors).
   useEffect(() => {
-    animatedFill.value = withTiming(fill, {
-      duration: 700,
-    });
-  }, [fill]);
+    animatedFill.set(withTiming(fill, { duration: FILL_ANIMATION_MS }));
+  }, [fill, animatedFill]);
 
   return (
     <Track

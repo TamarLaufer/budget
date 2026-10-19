@@ -1,0 +1,183 @@
+// PostgreSQL is the source of truth for all household and financial data.
+// Firebase is used only for identity: User.firebaseUid links the two.
+// Money columns are integer agorot (₪87.90 = 8790). Never store floats.
+
+generator client {
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "esm"
+  importFileExtension = "js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  OWNER
+  ADMIN
+  MEMBER
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+  EXPIRED
+  REVOKED
+}
+
+enum TransactionType {
+  EXPENSE
+  INCOME
+}
+
+model User {
+  id          String   @id @default(uuid()) @db.Uuid
+  firebaseUid String   @unique
+  /// Normalized (trimmed, lower-case) email from the verified Firebase token.
+  email       String
+  displayName String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  membership          HouseholdMember?
+  householdsCreated   Household[]      @relation("HouseholdCreator")
+  invitationsSent     Invitation[]     @relation("InvitationSender")
+  transactionsCreated Transaction[]
+
+  @@index([email])
+}
+
+model Household {
+  id              String   @id @default(uuid()) @db.Uuid
+  name            String
+  createdByUserId String   @db.Uuid
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  createdBy      User            @relation("HouseholdCreator", fields: [createdByUserId], references: [id])
+  members        HouseholdMember[]
+  invitations    Invitation[]
+  categories     Category[]
+  budgets        MonthlyBudget[]
+  transactions   Transaction[]
+  paymentMethods PaymentMethod[]
+}
+
+model HouseholdMember {
+  id          String   @id @default(uuid()) @db.Uuid
+  householdId String   @db.Uuid
+  /// Unique: a user belongs to at most one household (MVP decision, see server/README.md).
+  userId      String   @unique @db.Uuid
+  role        Role
+  createdAt   DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, userId])
+}
+
+model Invitation {
+  id              String           @id @default(uuid()) @db.Uuid
+  householdId     String           @db.Uuid
+  /// Normalized (trimmed, lower-case) email.
+  email           String
+  role            Role
+  invitedByUserId String           @db.Uuid
+  status          InvitationStatus @default(PENDING)
+  expiresAt       DateTime
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  invitedBy User      @relation("InvitationSender", fields: [invitedByUserId], references: [id])
+
+  @@index([email, status])
+  @@index([householdId, status])
+}
+
+model Category {
+  id          String   @id @default(uuid()) @db.Uuid
+  householdId String   @db.Uuid
+  name        String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household     Household       @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  subCategories SubCategory[]
+  budgets       MonthlyBudget[]
+  transactions  Transaction[]
+
+  @@unique([householdId, name])
+}
+
+model SubCategory {
+  id         String   @id @default(uuid()) @db.Uuid
+  categoryId String   @db.Uuid
+  name       String
+  createdAt  DateTime @default(now())
+
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, name])
+}
+
+model MonthlyBudget {
+  id           String   @id @default(uuid()) @db.Uuid
+  householdId  String   @db.Uuid
+  categoryId   String   @db.Uuid
+  year         Int
+  /// 1-12
+  month        Int
+  amountAgorot Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  category  Category  @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+
+  @@unique([householdId, categoryId, year, month])
+  @@index([householdId, year, month])
+}
+
+model PaymentMethod {
+  id          String   @id @default(uuid()) @db.Uuid
+  householdId String   @db.Uuid
+  name        String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  household    Household     @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  transactions Transaction[]
+
+  @@unique([householdId, name])
+}
+
+model Transaction {
+  id              String          @id @default(uuid()) @db.Uuid
+  householdId     String          @db.Uuid
+  createdByUserId String          @db.Uuid
+  type            TransactionType
+  amountAgorot    Int
+  /// Required for EXPENSE (enforced by the API and a CHECK constraint).
+  categoryId      String?         @db.Uuid
+  description     String?
+  /// Calendar date without time zone.
+  transactionDate DateTime        @db.Date
+  paymentMethodId String?         @db.Uuid
+  incomeSource    String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  household     Household      @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  createdBy     User           @relation(fields: [createdByUserId], references: [id])
+  category      Category?      @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  paymentMethod PaymentMethod? @relation(fields: [paymentMethodId], references: [id], onDelete: SetNull)
+
+  @@index([householdId, transactionDate])
+  @@index([householdId, categoryId])
+}
