@@ -22,11 +22,19 @@ function initFirebaseApp(config: AppConfig["firebase"]): App {
   if (existing) return existing;
 
   if (config.serviceAccountBase64) {
-    const json = JSON.parse(Buffer.from(config.serviceAccountBase64, "base64").toString("utf8")) as {
+      const json = JSON.parse(Buffer.from(config.serviceAccountBase64, "base64").toString("utf8")) as {
       project_id: string;
       client_email: string;
       private_key: string;
+      private_key_id: string;
     };
+
+    console.log("FIREBASE KEY LOADED", {
+    projectId: json.project_id,
+    clientEmail: json.client_email,
+    privateKeyId: json.private_key_id,
+  });
+    
     return initializeApp({
       credential: cert({
         projectId: json.project_id,

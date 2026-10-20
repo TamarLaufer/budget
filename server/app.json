@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "3f04ce16-f1e6-444b-b714-e066b8b4d63b"
+      }
+    },
+    "android": {
+      "package": "com.tamarlaufer.budgetserver"
+    }
+  }
+}
