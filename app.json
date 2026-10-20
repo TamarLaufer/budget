@@ -27,10 +27,22 @@
     },
     "plugins": [
       "expo-router",
-      ["expo-localization", { "supportsRTL": true, "forcesRTL": true }]
+      [
+        "expo-localization",
+        {
+          "supportsRTL": true,
+          "forcesRTL": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "184857da-9dd1-44cb-95af-b499786dd336"
+      }
     }
   }
 }
