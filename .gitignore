@@ -47,3 +47,4 @@ yarn-error.*
 *.service-account.json
 service-account*.json
 google-services.json
+*firebase-adminsdk*.json
