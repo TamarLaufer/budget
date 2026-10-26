@@ -10,25 +10,27 @@ interface OverProps {
 
 export const Card = styled.Pressable<OverProps>`
   background-color: ${({ $isSelected }) =>
-    $isSelected ? colors.selected : colors.border};
-  border-radius: ${radius.md}px;
-  border-width: ${({ $isOver }) => ($isOver ? 1 : StyleSheet.hairlineWidth)}px;
-  border-color: ${({ $isOver }) => ($isOver ? colors.danger : colors.border)};
+    $isSelected ? colors.selected : colors.surface};
+  border-radius: 20px;
+  border-width: ${({ $isOver }) =>
+    $isOver ? 1.5 : StyleSheet.hairlineWidth}px;
+  border-color: ${({ $isOver }) =>
+    $isOver ? colors.danger : colors.border};
   padding: ${spacing.lg}px;
   gap: ${spacing.sm}px;
 `;
 
 export const HeaderRow = styled.View`
   flex-direction: row;
-  align-items: space-between;
+  align-items: center;
   justify-content: flex-end;
   gap: ${spacing.sm}px;
-  margin-bottom: ${spacing.xs}px;
+  margin-bottom: 0px;
 `;
 
 export const Name = styled.Text`
   flex-shrink: 1;
-  font-size: ${fontSize.heading}px;
+  font-size: ${fontSize.value}px;
   font-weight: 700;
   color: ${colors.text};
 `;

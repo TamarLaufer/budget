@@ -51,7 +51,7 @@ export const strings = {
   ARE_YOU_SURE: "בטוח?",
 
   // ---- Tabs / screen titles ----
-  TAB_DASHBOARD: "סקירה",
+  TAB_DASHBOARD: "תמונת מצב",
   TAB_TRANSACTIONS: "תנועות",
   TAB_CATEGORIES: "קטגוריות",
   TAB_SETTINGS: "הגדרות",

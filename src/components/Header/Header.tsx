@@ -1,6 +1,8 @@
 import { HeaderContainer, Month, MonthRow, NavButton, NavText, Title } from "./Header.styles";
 import { strings } from "../../strings/he";
 import { formatMonthYear } from "../../budget/calculations";
+import { Feather } from "@expo/vector-icons";
+import { colors } from "../../theme";
 
 type Props = {
   month: Date;
@@ -10,7 +12,7 @@ type Props = {
   title?: string;
 };
 
-const Header = ({ month, onPrevious, onNext, title = strings.MY_BUDGET }: Props) => {
+const Header = ({ month, onPrevious, onNext, title = strings.APP_NAME }: Props) => {
   return (
     <HeaderContainer>
       <Title accessibilityRole="header">{title}</Title>
@@ -18,13 +20,13 @@ const Header = ({ month, onPrevious, onNext, title = strings.MY_BUDGET }: Props)
         {onPrevious ? (
           <NavButton onPress={onPrevious} accessibilityRole="button" accessibilityLabel={strings.PREVIOUS_MONTH} hitSlop={12}>
             {/* In RTL the previous month is on the right, so the arrow points right. */}
-            <NavText>→</NavText>
+            <Feather name="arrow-right" size={22} color={colors.primary} />
           </NavButton>
         ) : null}
         <Month accessibilityLiveRegion="polite">{formatMonthYear(month)}</Month>
         {onNext ? (
           <NavButton onPress={onNext} accessibilityRole="button" accessibilityLabel={strings.NEXT_MONTH} hitSlop={12}>
-            <NavText>←</NavText>
+            <Feather name="arrow-left" size={22} color={colors.primary} />
           </NavButton>
         ) : null}
       </MonthRow>

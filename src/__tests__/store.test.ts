@@ -4,7 +4,8 @@ import {
   selectBudgetsForPeriod,
   selectCanManage,
   selectDashboard,
-  selectPeriodLoad,
+  combineLoads,
+  selectLoad,
   selectTransactionsForPeriod,
 } from "../store/selectors";
 import { householdChanged, sessionEnded } from "../store/shared";
@@ -19,7 +20,7 @@ import {
   fetchMonthTransactions,
   updateTransaction,
 } from "../store/slices/transactionsSlice";
-import { fulfilled, makeBudget, makeCategory, makeTransaction, meWithHousehold } from "../test-utils/fixtures";
+import { fulfilled, pending, respond, makeBudget, makeCategory, makeTransaction, meWithHousehold } from "../test-utils/fixtures";
 
 const october = { year: 2026, month: 10 };
 const september = { year: 2026, month: 9 };
@@ -53,11 +54,11 @@ describe("transactions reducer", () => {
     const store = storeAtOctober();
     const septTx = makeTransaction({ transactionDate: "2026-09-20" });
     const deletedElsewhere = makeTransaction({ transactionDate: "2026-10-05" });
-    store.dispatch(fulfilled(fetchMonthTransactions, [septTx], september));
-    store.dispatch(fulfilled(fetchMonthTransactions, [deletedElsewhere], october));
+    respond(store, fetchMonthTransactions, [septTx], september);
+    respond(store, fetchMonthTransactions, [deletedElsewhere], october);
 
     const fresh = makeTransaction({ transactionDate: "2026-10-06" });
-    store.dispatch(fulfilled(fetchMonthTransactions, [fresh], october));
+    respond(store, fetchMonthTransactions, [fresh], october);
 
     expect(selectTransactionsForPeriod(store.getState()).map((t) => t.id)).toEqual([fresh.id]);
     store.dispatch(periodSelected(september));
@@ -68,7 +69,7 @@ describe("transactions reducer", () => {
     const store = storeAtOctober();
     const a = makeTransaction({ transactionDate: "2026-10-01" });
     const b = makeTransaction({ transactionDate: "2026-10-20" });
-    store.dispatch(fulfilled(fetchMonthTransactions, [a, b], october));
+    respond(store, fetchMonthTransactions, [a, b], october);
     expect(selectTransactionsForPeriod(store.getState()).map((t) => t.id)).toEqual([b.id, a.id]);
   });
 });
@@ -77,22 +78,16 @@ describe("dashboard selector", () => {
   function seeded() {
     const store = storeAtOctober();
     const food = makeCategory({ id: "food", name: "Food" });
-    store.dispatch(fulfilled(fetchCategories, [food], undefined));
-    store.dispatch(fulfilled(fetchMonthBudgets, [makeBudget({ categoryId: "food", year: 2026, month: 9, amountAgorot: 50_000 })], september));
-    store.dispatch(fulfilled(fetchMonthBudgets, [makeBudget({ categoryId: "food", amountAgorot: 100_000 })], october));
-    store.dispatch(
-      fulfilled(fetchMonthTransactions, [makeTransaction({ transactionDate: "2026-09-15", amountAgorot: 70_000 })], september),
-    );
-    store.dispatch(
-      fulfilled(
-        fetchMonthTransactions,
+    respond(store, fetchCategories, [food], undefined);
+    respond(store, fetchMonthBudgets, [makeBudget({ categoryId: "food", year: 2026, month: 9, amountAgorot: 50_000 })], september);
+    respond(store, fetchMonthBudgets, [makeBudget({ categoryId: "food", amountAgorot: 100_000 })], october);
+    respond(store, fetchMonthTransactions, [makeTransaction({ transactionDate: "2026-09-15", amountAgorot: 70_000 })], september);
+    respond(store, fetchMonthTransactions,
         [
           makeTransaction({ amountAgorot: 120_000 }),
           makeTransaction({ type: "INCOME", categoryId: null, amountAgorot: 1_000_000 }),
         ],
-        october,
-      ),
-    );
+        october);
     return store;
   }
 
@@ -136,29 +131,34 @@ describe("dashboard selector", () => {
   });
 });
 
+/** What the dashboard's load state was before screens chose their own data sets. */
+const periodLoad = (state: ReturnType<ReturnType<typeof createStore>["getState"]>) =>
+  combineLoads((["transactions", "budgets", "categories"] as const).map((d) => selectLoad(state, d)));
+
 describe("load state", () => {
   it("is loaded only when transactions, budgets and categories are all in", () => {
     const store = storeAtOctober();
-    expect(selectPeriodLoad(store.getState()).loaded).toBe(false);
-    store.dispatch(fulfilled(fetchMonthTransactions, [], october));
-    store.dispatch(fulfilled(fetchMonthBudgets, [], october));
-    expect(selectPeriodLoad(store.getState()).loaded).toBe(false);
-    store.dispatch(fulfilled(fetchCategories, [], undefined));
-    expect(selectPeriodLoad(store.getState())).toEqual({ status: "succeeded", error: null, loaded: true });
+    expect(periodLoad(store.getState()).loaded).toBe(false);
+    respond(store, fetchMonthTransactions, [], october);
+    respond(store, fetchMonthBudgets, [], october);
+    expect(periodLoad(store.getState()).loaded).toBe(false);
+    respond(store, fetchCategories, [], undefined);
+    expect(periodLoad(store.getState())).toEqual({ status: "succeeded", error: null, loaded: true });
   });
 
   it("keeps data marked as loaded while a refetch fails", () => {
     const store = storeAtOctober();
-    store.dispatch(fulfilled(fetchMonthTransactions, [], october));
-    store.dispatch(fulfilled(fetchMonthBudgets, [], october));
-    store.dispatch(fulfilled(fetchCategories, [], undefined));
+    respond(store, fetchMonthTransactions, [], october);
+    respond(store, fetchMonthBudgets, [], october);
+    respond(store, fetchCategories, [], undefined);
+    store.dispatch(pending(fetchMonthTransactions, october, "x"));
     store.dispatch({
       type: fetchMonthTransactions.rejected.type,
       payload: { status: 0, code: "NETWORK_ERROR", message: "offline" },
       meta: { arg: october, requestId: "x", requestStatus: "rejected", rejectedWithValue: true, aborted: false, condition: false },
       error: {},
     });
-    expect(selectPeriodLoad(store.getState())).toMatchObject({ status: "failed", loaded: true, error: { code: "NETWORK_ERROR" } });
+    expect(periodLoad(store.getState())).toMatchObject({ status: "failed", loaded: true, error: { code: "NETWORK_ERROR" } });
   });
 });
 
@@ -197,7 +197,7 @@ describe("session and household state", () => {
     store.dispatch(firebaseUserChanged({ uid: "u", email: "a@example.com", emailVerified: true }));
     store.dispatch(fulfilled(loadMe, meWithHousehold, undefined));
     store.dispatch(fulfilled(createTransaction, makeTransaction(), {}));
-    store.dispatch(fulfilled(fetchCategories, [makeCategory()], undefined));
+    respond(store, fetchCategories, [makeCategory()], undefined);
 
     store.dispatch(sessionEnded());
     const state = store.getState();

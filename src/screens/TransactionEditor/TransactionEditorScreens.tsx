@@ -10,10 +10,20 @@ import { TransactionForm } from "../../components/TransactionForm/TransactionFor
 import { Button } from "../../components/ui/Button";
 import { EmptyState, ErrorBanner } from "../../components/ui/Feedback";
 import { ScrollScreen } from "../../components/ui/Layout";
+import { useScreenData } from "../../hooks/useScreenData";
 import { useAppDispatch, useAppSelector } from "../../store";
-import { categorySelectors, selectActiveCategories, selectActivePaymentMethods, transactionSelectors } from "../../store/selectors";
+import {
+  categorySelectors,
+  selectActiveCategories,
+  selectActivePaymentMethods,
+  transactionSelectors,
+  type Dataset,
+} from "../../store/selectors";
 import { createTransaction, deleteTransaction, updateTransaction } from "../../store/slices/transactionsSlice";
 import { strings } from "../../strings/he";
+
+/** The form's choices; loaded when missing, stale or past the freshness limit. */
+const DATASETS: readonly Dataset[] = ["categories", "paymentMethods"];
 
 /** Today if the selected month is the current one, otherwise the 1st of the selected month. */
 function defaultDate(period: Period): string {
@@ -24,6 +34,7 @@ function defaultDate(period: Period): string {
 }
 
 export function NewTransactionScreen() {
+  useScreenData(DATASETS);
   const dispatch = useAppDispatch();
   const period = useAppSelector((s) => s.period);
   const categories = useAppSelector(selectActiveCategories);
@@ -61,6 +72,7 @@ export function NewTransactionScreen() {
 
 export function EditTransactionScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  useScreenData(DATASETS);
   const dispatch = useAppDispatch();
   const transaction = useAppSelector((s) => transactionSelectors.selectById(s, id));
   const activeCategories = useAppSelector(selectActiveCategories);

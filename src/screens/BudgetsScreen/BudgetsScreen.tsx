@@ -12,18 +12,21 @@ import { Button } from "../../components/ui/Button";
 import { EmptyState, ErrorBanner, ErrorView, LoadingView } from "../../components/ui/Feedback";
 import { BodyText, Card, MutedText, Row, ScrollScreen } from "../../components/ui/Layout";
 import { TextField } from "../../components/ui/TextField";
-import { usePeriodData } from "../../hooks/usePeriodData";
+import { useScreenData } from "../../hooks/useScreenData";
 import { useAppDispatch, useAppSelector } from "../../store";
-import { selectActiveCategories, selectBudgetsForPeriod } from "../../store/selectors";
+import { selectActiveCategories, selectBudgetsForPeriod, type Dataset } from "../../store/selectors";
 import { deleteBudget, upsertBudget } from "../../store/slices/budgetsSlice";
 import { periodShifted } from "../../store/slices/periodSlice";
 import { format } from "../../strings/format";
 import { strings } from "../../strings/he";
 
+/** What this screen shows; loaded when missing, stale or past the freshness limit. */
+const DATASETS: readonly Dataset[] = ["budgets", "categories"];
+
 /** Per-category budgets for the selected month. Saving one month never changes another. */
 export default function BudgetsScreen() {
   const dispatch = useAppDispatch();
-  const { period, load, refresh, refreshing } = usePeriodData();
+  const { period, load, refresh, refreshing } = useScreenData(DATASETS);
   const categories = useAppSelector(selectActiveCategories);
   const budgets = useAppSelector(selectBudgetsForPeriod);
 

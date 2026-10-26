@@ -10,11 +10,12 @@ import { ChipGroup } from "../../components/ui/ChipGroup";
 import { ErrorBanner, InfoBanner } from "../../components/ui/Feedback";
 import { BodyText, Card, MutedText, Row, ScrollScreen, SectionTitle, SpaceBetweenRow, Title } from "../../components/ui/Layout";
 import { TextField } from "../../components/ui/TextField";
+import { useScreenData } from "../../hooks/useScreenData";
 import { useAppDispatch, useAppSelector } from "../../store";
-import { paymentMethodSelectors, selectCanManage } from "../../store/selectors";
+import { paymentMethodSelectors, selectCanManage, type Dataset } from "../../store/selectors";
 import { householdChanged } from "../../store/shared";
 import { updateDisplayName } from "../../store/slices/authSlice";
-import { createPaymentMethod, fetchPaymentMethods, updatePaymentMethod } from "../../store/slices/catalogSlices";
+import { createPaymentMethod, updatePaymentMethod } from "../../store/slices/catalogSlices";
 import {
   fetchInvitations,
   fetchMembers,
@@ -203,7 +204,7 @@ function MemberItem({ member, isMe, myRole }: { member: MemberDto; isMe: boolean
 
 function InvitationsSection() {
   const dispatch = useAppDispatch();
-  const { invitations, invitationsLoad } = useAppSelector((s) => s.household);
+  const { invitations, invitationsLoad } = useAppSelector((state) => state.household);
   const isOwner = useAppSelector((s) => s.auth.me?.membership?.role === "OWNER");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<InvitableRole>("MEMBER");
@@ -262,15 +263,14 @@ function InvitationsSection() {
   );
 }
 
+const PAYMENT_METHODS: readonly Dataset[] = ["paymentMethods"];
+
 function PaymentMethodsSection({ canManage }: { canManage: boolean }) {
   const dispatch = useAppDispatch();
   const methods = useAppSelector(paymentMethodSelectors.selectAll);
   const [name, setName] = useState("");
   const { busy, error, run } = useAction();
-
-  useEffect(() => {
-    void dispatch(fetchPaymentMethods());
-  }, [dispatch]);
+  useScreenData(PAYMENT_METHODS);
 
   return (
     <Card>

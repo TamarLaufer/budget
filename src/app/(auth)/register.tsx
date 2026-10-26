@@ -1,3 +1,1 @@
-import { RegisterScreen } from "../../screens/auth/AuthScreens";
-
-export default RegisterScreen;
+export { RegisterScreen as default } from "@/screens/auth/RegisterScreen";

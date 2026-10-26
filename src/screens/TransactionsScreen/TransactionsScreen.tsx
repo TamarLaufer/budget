@@ -15,12 +15,15 @@ import { EmptyState, ErrorBanner, ErrorView, LoadingView } from "../../component
 import { TextField } from "../../components/ui/TextField";
 import { TransactionRow } from "../../components/TransactionRow/TransactionRow";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
-import { usePeriodData } from "../../hooks/usePeriodData";
+import { useScreenData } from "../../hooks/useScreenData";
 import { useAppDispatch, useAppSelector } from "../../store";
-import { categorySelectors, selectTransactionsForPeriod } from "../../store/selectors";
+import { categorySelectors, selectTransactionsForPeriod, type Dataset } from "../../store/selectors";
 import { periodShifted } from "../../store/slices/periodSlice";
 import { strings } from "../../strings/he";
 import { colors, spacing } from "../../theme";
+
+/** What this screen shows; loaded when missing, stale or past the freshness limit. */
+const DATASETS: readonly Dataset[] = ["transactions", "categories"];
 
 const Filters = styled.View`
   gap: ${spacing.sm}px;
@@ -36,7 +39,7 @@ const ALL = "__all__";
 export default function TransactionsScreen() {
   const dispatch = useAppDispatch();
   const insets = useSafeAreaInsets();
-  const { period, load, refresh, refreshing } = usePeriodData();
+  const { period, load, refresh, refreshing } = useScreenData(DATASETS);
   const transactions = useAppSelector(selectTransactionsForPeriod);
   const categories = useAppSelector(categorySelectors.selectAll);
   const memberCount = useAppSelector((s) => s.household.members.length);

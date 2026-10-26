@@ -39,19 +39,19 @@ export function CategoryCard({
     category;
 
   const scale = useDerivedValue(() =>
-    withTiming(isSelected ? 1.04 : 1, {
+    withTiming(isSelected ? 1.015 : 1, {
       duration: 230,
     }),
   );
 
   const elevation = useDerivedValue(() => {
-    return withTiming(isSelected ? 8 : 0, {
+    return withTiming(isSelected ? 3 : 0, {
       duration: 230,
     });
   });
 
   const position = useDerivedValue(() => {
-    return withTiming(isSelected ? 8 : 0, {
+    return withTiming(isSelected ? 2 : 0, {
       duration: 230,
     });
   });

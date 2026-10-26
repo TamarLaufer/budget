@@ -10,10 +10,10 @@ import Header from "../../components/Header/Header";
 import { Button } from "../../components/ui/Button";
 import { EmptyState, ErrorBanner, ErrorView, LoadingView } from "../../components/ui/Feedback";
 import { ScrollScreen } from "../../components/ui/Layout";
-import { usePeriodData } from "../../hooks/usePeriodData";
+import { useScreenData } from "../../hooks/useScreenData";
 import { useSelectedCategory } from "../../hooks/useSelectedCategory";
 import { useAppDispatch, useAppSelector } from "../../store";
-import { selectCanManage, selectDashboard } from "../../store/selectors";
+import { selectCanManage, selectDashboard, type Dataset } from "../../store/selectors";
 import { periodShifted } from "../../store/slices/periodSlice";
 import { strings } from "../../strings/he";
 import { colors } from "../../theme";
@@ -27,10 +27,13 @@ import {
   ShowAllText,
 } from "./MonthlySnapshotScreen.styles";
 
+/** What this screen shows; loaded when missing, stale or past the freshness limit. */
+const DATASETS: readonly Dataset[] = ["transactions", "budgets", "categories"];
+
 /** Monthly dashboard: every number is derived from the month's real transactions and budgets. */
 const MonthlySnapshotScreen = () => {
   const dispatch = useAppDispatch();
-  const { period, load, refresh, refreshing } = usePeriodData();
+  const { period, load, refresh, refreshing } = useScreenData(DATASETS);
   const dashboard = useAppSelector(selectDashboard);
   const canManage = useAppSelector(selectCanManage);
   const { snapshot } = dashboard;

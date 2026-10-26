@@ -3,7 +3,21 @@ import { createEntityAdapter, createSlice } from "@reduxjs/toolkit";
 import type { CreateTransactionRequest, TransactionDto, UpdateTransactionRequest } from "../../../shared/api";
 import { api } from "../../api/endpoints";
 import { isDateInPeriod, periodKey, type Period } from "../../budget/period";
-import { apiThunk, loadFailed, loadPending, loadSucceeded, householdChanged, type LoadState } from "../shared";
+import {
+  acceptResponse,
+  apiThunk,
+  dataInvalidated,
+  householdChanged,
+  isCurrentRequest,
+  loadFailed,
+  loadPending,
+  loadSucceeded,
+  markStale,
+  replaceRecords,
+  shouldFetch,
+  type FetchOptions,
+  type LoadState,
+} from "../shared";
 
 /** Newest first: by date, then by creation time for same-day entries. */
 export const transactionsAdapter = createEntityAdapter<TransactionDto>({
@@ -14,12 +28,16 @@ export const transactionsAdapter = createEntityAdapter<TransactionDto>({
 interface TransactionsExtra {
   /** Load state per month, keyed by periodKey ("2026-10"). */
   months: Record<string, LoadState>;
+  /** Counts successful creates, updates and deletes, to spot fetches that raced with one. */
+  revision: number;
 }
 
-const initialState = transactionsAdapter.getInitialState<TransactionsExtra>({ months: {} });
+const initialState = transactionsAdapter.getInitialState<TransactionsExtra>({ months: {}, revision: 0 });
 
-export const fetchMonthTransactions = apiThunk("transactions/fetchMonth", ({ year, month }: Period) =>
-  api.transactions.list({ year, month }),
+export const fetchMonthTransactions = apiThunk(
+  "transactions/fetchMonth",
+  ({ year, month }: Period & FetchOptions) => api.transactions.list({ year, month }),
+  (arg, state) => shouldFetch(state.transactions.months[periodKey(arg)], arg.force),
 );
 export const createTransaction = apiThunk("transactions/create", (body: CreateTransactionRequest) =>
   api.transactions.create(body),
@@ -37,32 +55,41 @@ const transactionsSlice = createSlice({
   extraReducers: (builder) => {
     builder
       .addCase(householdChanged, () => initialState)
+      .addCase(dataInvalidated, (state) => {
+        Object.values(state.months).forEach(markStale);
+      })
       .addCase(fetchMonthTransactions.pending, (state, action) => {
         const key = periodKey(action.meta.arg);
-        state.months[key] = loadPending(state.months[key]);
+        const { requestId: id, startedAt } = action.meta;
+        state.months[key] = loadPending(state.months[key], { id, startedAt, revision: state.revision });
       })
       .addCase(fetchMonthTransactions.fulfilled, (state, action) => {
         const period = action.meta.arg;
+        const key = periodKey(period);
+        const fetchedAt = acceptResponse(state.months, key, action.meta.requestId, state.revision);
+        if (fetchedAt === null) return;
         // Replace the month wholesale so records another member deleted disappear too.
-        const stale = Object.values(state.entities)
-          .filter((t) => isDateInPeriod(t.transactionDate, period))
-          .map((t) => t.id);
-        transactionsAdapter.removeMany(state, stale);
-        transactionsAdapter.upsertMany(state, action.payload);
-        state.months[periodKey(period)] = loadSucceeded;
+        replaceRecords(transactionsAdapter, state, action.payload, (t) => isDateInPeriod(t.transactionDate, period));
+        state.months[key] = loadSucceeded(fetchedAt);
       })
       .addCase(fetchMonthTransactions.rejected, (state, action) => {
-        state.months[periodKey(action.meta.arg)] = loadFailed(state.months[periodKey(action.meta.arg)], action.payload);
+        const key = periodKey(action.meta.arg);
+        if (isCurrentRequest(state.months[key], action.meta.requestId)) {
+          state.months[key] = loadFailed(state.months[key], action.payload);
+        }
       })
       // Mutations apply the server's response directly; no refetch needed.
       .addCase(createTransaction.fulfilled, (state, action) => {
         transactionsAdapter.addOne(state, action.payload);
+        state.revision += 1;
       })
       .addCase(updateTransaction.fulfilled, (state, action) => {
         transactionsAdapter.setOne(state, action.payload);
+        state.revision += 1;
       })
       .addCase(deleteTransaction.fulfilled, (state, action) => {
         transactionsAdapter.removeOne(state, action.meta.arg);
+        state.revision += 1;
       });
   },
 });
