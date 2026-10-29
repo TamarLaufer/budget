@@ -26,6 +26,7 @@ import {
   ShowAllPress,
   ShowAllText,
 } from "./MonthlySnapshotScreen.styles";
+import { formatCurrency } from "@/functions/assets";
 
 /** What this screen shows; loaded when missing, stale or past the freshness limit. */
 const DATASETS: readonly Dataset[] = ["transactions", "budgets", "categories"];
@@ -81,7 +82,9 @@ const MonthlySnapshotScreen = () => {
         <IncomeLabel>{strings.INCOME}</IncomeLabel>
         <IncomeValue $color={colors.success}>{formatAgorot(dashboard.totalIncome)}</IncomeValue>
         <IncomeLabel>{strings.NET}</IncomeLabel>
-        <IncomeValue $color={dashboard.net < 0 ? colors.danger : colors.success}>{formatAgorot(dashboard.net)}</IncomeValue>
+        <IncomeValue $color={dashboard.net < 0 ? colors.danger : colors.success}>
+            {formatCurrency(dashboard.net)}
+        </IncomeValue>
       </IncomeRow>
 
       <Button label={strings.ADD_TRANSACTION} onPress={() => router.push("/transaction/new")} testID="add-transaction" />
