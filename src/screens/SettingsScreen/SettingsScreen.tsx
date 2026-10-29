@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert } from "react-native";
+import { Alert, Switch } from "react-native";
 
 import type { InvitableRole, MemberDto } from "../../../shared/api";
 import { errorMessage, messageFromUnknown } from "../../api/errorMessage";
@@ -11,10 +11,11 @@ import { ErrorBanner, InfoBanner } from "../../components/ui/Feedback";
 import { BodyText, Card, MutedText, Row, ScrollScreen, SectionTitle, SpaceBetweenRow, Title } from "../../components/ui/Layout";
 import { TextField } from "../../components/ui/TextField";
 import { useScreenData } from "../../hooks/useScreenData";
+import { isPushSupported, registerDevice, requestPermission } from "../../notifications/pushNotifications";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { paymentMethodSelectors, selectCanManage, type Dataset } from "../../store/selectors";
 import { householdChanged } from "../../store/shared";
-import { updateDisplayName } from "../../store/slices/authSlice";
+import { updateBudgetAlerts, updateDisplayName } from "../../store/slices/authSlice";
 import { createPaymentMethod, updatePaymentMethod } from "../../store/slices/catalogSlices";
 import {
   fetchInvitations,
@@ -28,6 +29,7 @@ import {
 } from "../../store/slices/householdSlice";
 import { format } from "../../strings/format";
 import { strings } from "../../strings/he";
+import { colors } from "../../theme";
 
 /** Runs an async action and exposes busy/error state for the button that triggered it. */
 function useAction() {
@@ -62,6 +64,7 @@ export default function SettingsScreen() {
     <ScrollScreen withTopInset>
       <Title>{strings.TAB_SETTINGS}</Title>
       <ProfileSection />
+      {isPushSupported ? <BudgetAlertsSection /> : null}
       <HouseholdSection canManage={canManage} />
       <MembersSection />
       {canManage ? <InvitationsSection /> : null}
@@ -91,6 +94,57 @@ function ProfileSection() {
         disabled={name.trim() === (user?.displayName ?? "")}
         onPress={() => void run(() => dispatch(updateDisplayName(name.trim() || null)).unwrap())}
       />
+    </Card>
+  );
+}
+
+/**
+ * Opt-in for budget threshold notifications. The server stores and enforces the preference, so
+ * turning it off stops alerts even while the app is closed.
+ */
+function BudgetAlertsSection() {
+  const dispatch = useAppDispatch();
+  const enabled = useAppSelector((s) => s.auth.me?.notifications.budgetAlertsEnabled ?? false);
+  const userId = useAppSelector((s) => s.auth.me?.user.id ?? null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const { busy, error, run } = useAction();
+
+  const toggle = (value: boolean) =>
+    void run(async () => {
+      setNotice(null);
+      if (value) {
+        if (!(await requestPermission())) {
+          setNotice(strings.BUDGET_ALERTS_PERMISSION_DENIED);
+          return;
+        }
+        try {
+          if (!userId) throw new Error("No profile");
+          await registerDevice(userId);
+        } catch {
+          setNotice(strings.BUDGET_ALERTS_UNAVAILABLE);
+          return;
+        }
+      }
+      await dispatch(updateBudgetAlerts(value)).unwrap();
+    });
+
+  return (
+    <Card>
+      <SpaceBetweenRow>
+        <SectionTitle>{strings.BUDGET_ALERTS}</SectionTitle>
+        <Switch
+          value={enabled}
+          onValueChange={toggle}
+          disabled={busy}
+          trackColor={{ false: colors.track, true: colors.primary }}
+          thumbColor={colors.surface}
+          accessibilityLabel={strings.BUDGET_ALERTS}
+          testID="budget-alerts-switch"
+        />
+      </SpaceBetweenRow>
+      <MutedText>{strings.BUDGET_ALERTS_HINT}</MutedText>
+      <InfoBanner message={notice} />
+      <ErrorBanner message={error} />
     </Card>
   );
 }

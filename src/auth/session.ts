@@ -8,6 +8,7 @@ import {
 } from "firebase/auth";
 
 import { configureApiClient } from "../api/client";
+import { unregisterDevice } from "../notifications/pushNotifications";
 import type { AppDispatch } from "../store";
 import { sessionEnded } from "../store/shared";
 import { firebaseUserChanged, loadMe, type FirebaseUserInfo } from "../store/slices/authSlice";
@@ -70,7 +71,15 @@ export async function refreshEmailVerification(): Promise<boolean> {
   return user.emailVerified;
 }
 
+/** How long sign-out waits for the server to forget this device's push token. */
+const UNREGISTER_TIMEOUT_MS = 3_000;
+
 export async function signOut(): Promise<void> {
+  // Needs the still-valid ID token, so it runs first; a failure must never block signing out.
+  await Promise.race([
+    unregisterDevice().catch(() => undefined),
+    new Promise((resolve) => setTimeout(resolve, UNREGISTER_TIMEOUT_MS)),
+  ]);
   await firebaseSignOut(getFirebaseAuth());
 }
 

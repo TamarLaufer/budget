@@ -3,9 +3,10 @@ import { createServer, type Server } from "node:http";
 import { pino } from "pino";
 import request from "supertest";
 import type { Express } from "express";
-import { afterAll } from "vitest";
+import { afterAll, beforeEach } from "vitest";
 
 import { createApp } from "../../src/app.js";
+import type { PushMessage, PushResult, PushSender } from "../../src/services/push/pushSender.js";
 import type { TokenVerifier, VerifiedIdentity } from "../../src/types/auth.js";
 import { unauthorized } from "../../src/utils/errors.js";
 
@@ -38,6 +39,34 @@ export class FakeTokenVerifier implements TokenVerifier {
   }
 }
 
+/**
+ * Records every push message instead of calling Expo. `respond` customizes per-message results;
+ * `fail` makes the whole request throw, like a network error or Expo outage.
+ */
+export class FakePushSender implements PushSender {
+  sent: PushMessage[] = [];
+  respond: (message: PushMessage) => PushResult = () => ({ ok: true });
+  fail: Error | null = null;
+  delayMs = 0;
+
+  async send(messages: PushMessage[]): Promise<PushResult[]> {
+    if (this.delayMs > 0) await new Promise((resolve) => setTimeout(resolve, this.delayMs));
+    if (this.fail) throw this.fail;
+    this.sent.push(...messages);
+    return messages.map((m) => this.respond(m));
+  }
+
+  reset(): void {
+    this.sent = [];
+    this.respond = () => ({ ok: true });
+    this.fail = null;
+    this.delayMs = 0;
+  }
+}
+
+/** Default "now" for tests: mid-October 2026 in Israel. */
+export const TEST_NOW = new Date("2026-10-15T09:00:00.000Z");
+
 export interface TestUser {
   token: string;
   email: string;
@@ -47,6 +76,9 @@ export interface TestUser {
 export interface TestContext {
   app: Express;
   verifier: FakeTokenVerifier;
+  push: FakePushSender;
+  /** Mutable clock used for "current month" decisions. */
+  clock: { now: Date };
   /** Registers a Firebase identity and returns its token. */
   user(name: string, options?: { emailVerified?: boolean; email?: string }): TestUser;
   /** supertest agent with the user's Bearer token. */
@@ -58,6 +90,12 @@ export type AuthedRequest = Record<Method, (url: string) => request.Test>;
 
 export function createTestContext(options: { rateLimitMax?: number } = {}): TestContext {
   const verifier = new FakeTokenVerifier();
+  const push = new FakePushSender();
+  const clock = { now: TEST_NOW };
+  beforeEach(() => {
+    push.reset();
+    clock.now = TEST_NOW;
+  });
   const app = createApp({
     config: {
       corsOrigins: [],
@@ -66,6 +104,8 @@ export function createTestContext(options: { rateLimitMax?: number } = {}): Test
     },
     logger: pino({ level: process.env.TEST_LOG_LEVEL ?? "silent" }),
     tokenVerifier: verifier,
+    pushSender: push,
+    now: () => clock.now,
   });
 
   // One listening server per test file (supertest would otherwise open a new one per request).
@@ -76,6 +116,8 @@ export function createTestContext(options: { rateLimitMax?: number } = {}): Test
   return {
     app,
     verifier,
+    push,
+    clock,
     user(name, { emailVerified = true, email } = {}) {
       const user = { token: `token-${name}`, uid: `uid-${name}`, email: email ?? `${name}@example.com` };
       verifier.register(user.token, { uid: user.uid, email: user.email, emailVerified });

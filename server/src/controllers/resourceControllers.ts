@@ -1,6 +1,7 @@
 import type { RequestHandler } from "express";
 
 import { getAuth, getHousehold } from "../middleware/requireHousehold.js";
+import type { BudgetAlerts } from "../services/budgetAlertService.js";
 import * as budgetService from "../services/budgetService.js";
 import * as catalogService from "../services/catalogService.js";
 import * as transactionService from "../services/transactionService.js";
@@ -77,7 +78,11 @@ export const budgets = {
   }) satisfies RequestHandler,
 };
 
-export const transactions = {
+/**
+ * Budget alerts run after the transaction is saved; they never throw and their wait is bounded,
+ * so a notification problem cannot fail or stall a save. Deletes only lower usage: no alert.
+ */
+export const createTransactionsController = (budgetAlerts: BudgetAlerts) => ({
   list: (async (req, res) => {
     const query = transactionListQuerySchema.parse(req.query);
     res.json(await transactionService.list(getHousehold(req), query));
@@ -90,13 +95,19 @@ export const transactions = {
 
   create: (async (req, res) => {
     const body = createTransactionSchema.parse(req.body);
-    res.status(201).json(await transactionService.create(getHousehold(req), getAuth(req), body));
+    const household = getHousehold(req);
+    const transaction = await transactionService.create(household, getAuth(req), body);
+    await budgetAlerts.afterExpenseSaved(household.householdId, transaction);
+    res.status(201).json(transaction);
   }) satisfies RequestHandler,
 
   update: (async (req, res) => {
     const { id } = idParamsSchema.parse(req.params);
     const body = updateTransactionSchema.parse(req.body);
-    res.json(await transactionService.update(getHousehold(req), getAuth(req), id, body));
+    const household = getHousehold(req);
+    const transaction = await transactionService.update(household, getAuth(req), id, body);
+    await budgetAlerts.afterExpenseSaved(household.householdId, transaction);
+    res.json(transaction);
   }) satisfies RequestHandler,
 
   remove: (async (req, res) => {
@@ -104,4 +115,4 @@ export const transactions = {
     await transactionService.remove(getHousehold(req), getAuth(req), id);
     res.status(204).end();
   }) satisfies RequestHandler,
-};
+});

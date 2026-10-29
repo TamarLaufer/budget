@@ -39,6 +39,7 @@ describe("authentication", () => {
     expect(first.body).toEqual({
       user: { id: expect.any(String) as string, email: "alice@example.com", displayName: null },
       membership: null,
+      notifications: { budgetAlertsEnabled: false },
     });
 
     const second = await ctx.as(alice).get("/api/auth/me");

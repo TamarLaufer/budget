@@ -11,8 +11,10 @@ import type {
   MemberDto,
   MembershipDto,
   MonthlyBudgetDto,
+  NotificationPreferencesDto,
   PaymentMethodDto,
   ReceivedInvitationDto,
+  RegisterPushDeviceRequest,
   TransactionDto,
   TransactionListQuery,
   UpdateCategoryRequest,
@@ -28,6 +30,13 @@ export const api = {
   me: {
     get: () => apiRequest<MeDto>("GET", "/auth/me"),
     update: (displayName: string | null) => apiRequest<MeDto>("PATCH", "/auth/me", { body: { displayName } }),
+  },
+
+  notifications: {
+    registerDevice: (body: RegisterPushDeviceRequest) => apiRequest<void>("PUT", "/notifications/devices", { body }),
+    unregisterDevice: (token: string) => apiRequest<void>("DELETE", "/notifications/devices", { body: { token } }),
+    updatePreferences: (body: NotificationPreferencesDto) =>
+      apiRequest<NotificationPreferencesDto>("PUT", "/notifications/preferences", { body }),
   },
 
   households: {

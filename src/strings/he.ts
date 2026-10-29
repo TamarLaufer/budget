@@ -174,6 +174,10 @@ export const strings = {
   PAYMENT_METHODS: "אמצעי תשלום",
   NEW_PAYMENT_METHOD: "אמצעי תשלום חדש",
   ANIMATION_PRACTICE: "תרגול אנימציות (פיתוח)",
+  BUDGET_ALERTS: "התראות תקציב",
+  BUDGET_ALERTS_HINT: "קבלו התראה כשמשק הבית מנצל 80% ו-100% מתקציב של קטגוריה החודש.",
+  BUDGET_ALERTS_PERMISSION_DENIED: "ההרשאה להתראות לא ניתנה. אפשר להפעיל אותה בהגדרות המכשיר, תחת Spendo › התראות.",
+  BUDGET_ALERTS_UNAVAILABLE: "לא ניתן היה להפעיל התראות במכשיר הזה. נסו שוב מאוחר יותר.",
 
   // ---- API errors by code ----
   API_ERRORS: {

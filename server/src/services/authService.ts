@@ -5,12 +5,16 @@ import type { AuthContext } from "../types/auth.js";
 import { toHouseholdDto, toUserDto } from "../utils/serializers.js";
 
 export async function getMe(auth: AuthContext): Promise<MeDto> {
-  const membership = await membersRepository.findByUserIdWithHousehold(auth.user.id);
+  const [membership, user] = await Promise.all([
+    membersRepository.findByUserIdWithHousehold(auth.user.id),
+    usersRepository.findById(auth.user.id),
+  ]);
   return {
     user: toUserDto(auth.user),
     membership: membership
       ? { household: toHouseholdDto(membership.household), role: membership.role }
       : null,
+    notifications: { budgetAlertsEnabled: user?.budgetAlertsEnabled ?? false },
   };
 }
 

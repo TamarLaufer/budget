@@ -33,3 +33,16 @@ export function monthRange(year: number, month: number): { gte: Date; lt: Date }
 export function yearRange(year: number): { gte: Date; lt: Date } {
   return { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) };
 }
+
+/**
+ * The household's calendar month at `now`. The app is used in Israel and the mobile client
+ * groups transactions by the user's local date, so "this month" is evaluated in that zone,
+ * not in the server's (UTC on Render).
+ */
+export const HOUSEHOLD_TIME_ZONE = "Asia/Jerusalem";
+
+export function currentPeriod(now: Date, timeZone: string = HOUSEHOLD_TIME_ZONE): { year: number; month: number } {
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "numeric" }).formatToParts(now);
+  const part = (type: "year" | "month") => Number(parts.find((p) => p.type === type)?.value);
+  return { year: part("year"), month: part("month") };
+}

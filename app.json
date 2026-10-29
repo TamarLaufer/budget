@@ -27,6 +27,14 @@
     "plugins": [
       "expo-router",
       [
+        "expo-notifications",
+        {
+          "icon": "./assets/android-icon-monochrome.png",
+          "color": "#087F69",
+          "defaultChannel": "budget-alerts"
+        }
+      ],
+      [
         "expo-localization",
         {
           "supportsRTL": true,

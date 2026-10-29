@@ -10,6 +10,10 @@ import type { ConfigContext, ExpoConfig } from "expo/config";
 export default ({ config }: ConfigContext): ExpoConfig => {
   const isDev = process.env.APP_VARIANT === "development";
   const apiUrl = process.env.EXPO_PUBLIC_API_URL ?? "";
+  // FCM config for push notifications, never committed. On EAS: the GOOGLE_SERVICES_JSON file
+  // environment variable. Locally: GOOGLE_SERVICES_JSON=./google-services.json in .env.
+  // Without it the app still builds; push registration then fails and Settings says so.
+  const googleServicesFile = process.env.GOOGLE_SERVICES_JSON;
 
   return {
     ...config,
@@ -21,6 +25,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       package: isDev
         ? "com.tamarlaufer.spendo.dev"
         : "com.tamarlaufer.spendo",
+      ...(googleServicesFile ? { googleServicesFile } : {}),
     },
 
     ios: {

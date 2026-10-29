@@ -9,7 +9,7 @@ const { disconnectPrisma, getPrisma } = await import("../../src/db/prisma.js");
 beforeEach(async () => {
   await getPrisma().$executeRawUnsafe(
     `TRUNCATE TABLE "Transaction", "MonthlyBudget", "SubCategory", "Category", "PaymentMethod",
-       "Invitation", "HouseholdMember", "Household", "User" RESTART IDENTITY CASCADE`,
+       "Invitation", "HouseholdMember", "Household", "User", "PushDevice", "BudgetAlert" RESTART IDENTITY CASCADE`,
   );
 });
 

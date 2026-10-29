@@ -31,3 +31,15 @@ export function updateAmount(budgetId: string, amountAgorot: number, db: Db = ge
 export function remove(budgetId: string, db: Db = getPrisma()) {
   return db.monthlyBudget.delete({ where: { id: budgetId } });
 }
+
+export function findForCategoryMonth(
+  householdId: string,
+  categoryId: string,
+  year: number,
+  month: number,
+  db: Db = getPrisma(),
+) {
+  return db.monthlyBudget.findUnique({
+    where: { householdId_categoryId_year_month: { householdId, categoryId, year, month } },
+  });
+}

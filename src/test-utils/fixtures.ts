@@ -40,6 +40,7 @@ export function makeBudget(overrides: Partial<MonthlyBudgetDto> = {}): MonthlyBu
 export const meWithHousehold: MeDto = {
   user: { id: "user-a", email: "a@example.com", displayName: "A" },
   membership: { household: { id: "h1", name: "Home", createdAt: "2026-01-01T00:00:00.000Z" }, role: "OWNER" },
+  notifications: { budgetAlertsEnabled: false },
 };
 
 /** Builds a fulfilled action the way createAsyncThunk would, for reducer tests. */

@@ -10,11 +10,15 @@ import { isFirebaseConfigured } from "../auth/firebase";
 import { signOut, startSession } from "../auth/session";
 import { Button } from "../components/ui/Button";
 import { ErrorView, LoadingView } from "../components/ui/Feedback";
+import { configureForegroundNotifications } from "../notifications/pushNotifications";
+import { useBudgetAlertNotifications } from "../notifications/useBudgetAlertNotifications";
 import { store, useAppDispatch, useAppSelector } from "../store";
 import { selectAppPhase } from "../store/selectors";
 import { loadMe } from "../store/slices/authSlice";
 import { strings } from "../strings/he";
 import { colors } from "../theme";
+
+configureForegroundNotifications();
 
 export default function RootLayout() {
   return (
@@ -38,6 +42,7 @@ function SessionGate() {
   const meError = useAppSelector((s) => s.auth.meError);
 
   useEffect(() => startSession(dispatch), [dispatch]);
+  useBudgetAlertNotifications(phase === "ready");
 
   if (phase === "initializing" || phase === "loadingProfile") return <LoadingView />;
   if (phase === "profileError") {
