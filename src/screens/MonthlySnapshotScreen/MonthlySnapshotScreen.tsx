@@ -13,7 +13,12 @@ import { ScrollScreen } from "../../components/ui/Layout";
 import { useScreenData } from "../../hooks/useScreenData";
 import { useSelectedCategory } from "../../hooks/useSelectedCategory";
 import { useAppDispatch, useAppSelector } from "../../store";
-import { selectCanManage, selectDashboard, type Dataset } from "../../store/selectors";
+import {
+  selectCanManage,
+  selectDashboard,
+  selectSnapshotCategoriesInDisplayOrder,
+  type Dataset,
+} from "../../store/selectors";
 import { periodShifted } from "../../store/slices/periodSlice";
 import { strings } from "../../strings/he";
 import { colors } from "../../theme";
@@ -36,6 +41,7 @@ const MonthlySnapshotScreen = () => {
   const dispatch = useAppDispatch();
   const { period, load, refresh, refreshing } = useScreenData(DATASETS);
   const dashboard = useAppSelector(selectDashboard);
+  const categories = useAppSelector(selectSnapshotCategoriesInDisplayOrder);
   const canManage = useAppSelector(selectCanManage);
   const { snapshot } = dashboard;
 
@@ -47,7 +53,7 @@ const MonthlySnapshotScreen = () => {
   }
   if (!load.loaded) return <LoadingView />;
 
-  const selectedCategory = snapshot.categories.find((c) => c.id === selectedCategoryId);
+  const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
 
   const toggleCategories = () => {
     if (!showOverBudgetOnly && selectedCategory && !selectedCategory.isOver) {
@@ -57,8 +63,8 @@ const MonthlySnapshotScreen = () => {
   };
 
   const categoriesToDisplay = showOverBudgetOnly
-    ? snapshot.categories.filter((category) => category.isOver)
-    : snapshot.categories;
+    ? categories.filter((category) => category.isOver)
+    : categories;
 
   const selectCategory = (categoryId: string) => {
     if (selectedCategoryId === categoryId) clearSelectedId();
@@ -93,7 +99,7 @@ const MonthlySnapshotScreen = () => {
         <SectionTitle accessibilityRole="header">{strings.CATEGORIES}</SectionTitle>
       </SectionTitleContainer>
 
-      {snapshot.categories.length === 0 ? (
+      {categories.length === 0 ? (
         <EmptyState title={strings.NO_CATEGORIES} hint={strings.NO_CATEGORIES_HINT} />
       ) : (
         <>

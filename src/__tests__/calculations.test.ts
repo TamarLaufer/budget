@@ -5,6 +5,8 @@ import {
   buildMonthlySnapshot,
   calculateUsage,
   formatMonthYear,
+  lastExpenseActivityByCategory,
+  orderSnapshotCategories,
   spentByCategory,
   totalIncome,
 } from "../budget/calculations";
@@ -127,5 +129,92 @@ describe("buildMonthlyDashboard", () => {
 describe("formatMonthYear", () => {
   it("formats in Hebrew", () => {
     expect(formatMonthYear(new Date(2026, 9, 1))).toBe("אוקטובר 2026");
+  });
+});
+
+describe("Monthly Snapshot category order", () => {
+  type Summary = Parameters<typeof orderSnapshotCategories>[0][number];
+  const summary = (id: string, overrides: Partial<Summary> = {}): Summary => ({
+    id,
+    name: id,
+    isActive: true,
+    isOver: false,
+    remaining: 0,
+    ...overrides,
+  });
+  const ids = (list: readonly { id: string }[]) => list.map((c) => c.id);
+  const activityTx = (categoryId: string, createdAt: string, updatedAt = createdAt) => ({
+    ...expense(categoryId, 100),
+    createdAt,
+    updatedAt,
+  });
+
+  it("puts active over-budget categories first, by overspend amount", () => {
+    const ordered = orderSnapshotCategories(
+      [
+        summary("calm"),
+        summary("small-over", { isOver: true, remaining: -100 }),
+        summary("big-over", { isOver: true, remaining: -5_000 }),
+      ],
+      new Map([["calm", Date.parse("2026-10-30T10:00:00Z")]]),
+    );
+    expect(ids(ordered)).toEqual(["big-over", "small-over", "calm"]);
+  });
+
+  it("orders the rest by latest activity, categories without activity after them", () => {
+    const ordered = orderSnapshotCategories(
+      [summary("none"), summary("older"), summary("newer")],
+      new Map([
+        ["older", Date.parse("2026-10-01T10:00:00Z")],
+        ["newer", Date.parse("2026-10-20T10:00:00Z")],
+      ]),
+    );
+    expect(ids(ordered)).toEqual(["newer", "older", "none"]);
+  });
+
+  it("keeps inactive categories last even when over budget", () => {
+    const ordered = orderSnapshotCategories(
+      [
+        summary("old-over", { isActive: false, isOver: true, remaining: -99_000 }),
+        summary("old", { isActive: false }),
+        summary("idle"),
+        summary("over", { isOver: true, remaining: -1 }),
+      ],
+      new Map([["old", Date.parse("2026-10-30T10:00:00Z")]]),
+    );
+    expect(ids(ordered)).toEqual(["over", "idle", "old-over", "old"]);
+  });
+
+  it("breaks ties by name, then id", () => {
+    const ordered = orderSnapshotCategories(
+      [
+        summary("c2", { name: "Same" }),
+        summary("b", { name: "Bravo" }),
+        summary("c1", { name: "Same" }),
+        summary("o2", { name: "Zed", isOver: true, remaining: -10 }),
+        summary("o1", { name: "Alpha", isOver: true, remaining: -10 }),
+      ],
+      new Map(),
+    );
+    expect(ids(ordered)).toEqual(["o1", "o2", "b", "c1", "c2"]);
+  });
+
+  it("returns a copy and leaves the input order alone", () => {
+    const input = Object.freeze([summary("b"), summary("a")]);
+    const ordered = orderSnapshotCategories(input, new Map());
+    expect(ids(ordered)).toEqual(["a", "b"]);
+    expect(ids(input)).toEqual(["b", "a"]);
+  });
+
+  it("measures activity by entry/edit time of expenses only", () => {
+    const latest = lastExpenseActivityByCategory([
+      activityTx("food", "2026-10-02T08:00:00.000Z", "2026-10-29T08:00:00.000Z"),
+      activityTx("food", "2026-10-05T08:00:00.000Z"),
+      activityTx("fun", "2026-10-10T08:00:00.000Z"),
+      { ...income(500), createdAt: "2026-10-30T08:00:00.000Z", updatedAt: "2026-10-30T08:00:00.000Z" },
+    ]);
+    expect(latest.get("food")).toBe(Date.parse("2026-10-29T08:00:00.000Z"));
+    expect(latest.get("fun")).toBe(Date.parse("2026-10-10T08:00:00.000Z"));
+    expect(latest.size).toBe(2);
   });
 });

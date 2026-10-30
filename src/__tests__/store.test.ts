@@ -6,6 +6,7 @@ import {
   selectDashboard,
   combineLoads,
   selectLoad,
+  selectSnapshotCategoriesInDisplayOrder,
   selectTransactionsForPeriod,
 } from "../store/selectors";
 import { householdChanged, sessionEnded } from "../store/shared";
@@ -128,6 +129,79 @@ describe("dashboard selector", () => {
   it("is memoized: same input state returns the same object", () => {
     const state = seeded().getState();
     expect(selectDashboard(state)).toBe(selectDashboard(state));
+  });
+});
+
+describe("snapshot category order selector", () => {
+  function seeded() {
+    const store = storeAtOctober();
+    respond(store, fetchCategories,
+        [
+          makeCategory({ id: "food", name: "Food" }),
+          makeCategory({ id: "fun", name: "Fun" }),
+          makeCategory({ id: "old", name: "Old", isActive: false }),
+        ],
+        undefined);
+    respond(store, fetchMonthBudgets,
+        [
+          makeBudget({ categoryId: "food", amountAgorot: 100_000 }),
+          makeBudget({ categoryId: "fun", amountAgorot: 100_000 }),
+          makeBudget({ categoryId: "old", amountAgorot: 1 }),
+        ],
+        october);
+    respond(store, fetchMonthTransactions,
+        [
+          makeTransaction({ categoryId: "food", transactionDate: "2026-10-20", createdAt: "2026-10-20T09:00:00.000Z", updatedAt: "2026-10-20T09:00:00.000Z" }),
+          makeTransaction({ categoryId: "fun", transactionDate: "2026-10-05", createdAt: "2026-10-05T09:00:00.000Z", updatedAt: "2026-10-05T09:00:00.000Z" }),
+          makeTransaction({ categoryId: "old", amountAgorot: 50_000, createdAt: "2026-10-29T09:00:00.000Z", updatedAt: "2026-10-29T09:00:00.000Z" }),
+        ],
+        october);
+    return store;
+  }
+  const order = (store: ReturnType<typeof createStore>) =>
+    selectSnapshotCategoriesInDisplayOrder(store.getState()).map((c) => c.id);
+
+  it("orders active categories by recent activity and keeps over-budget inactive ones last", () => {
+    expect(order(seeded())).toEqual(["food", "fun", "old"]);
+  });
+
+  it("counts a back-dated expense entered now as recent, and reorders after create, edit and delete", () => {
+    const store = seeded();
+    const backDated = makeTransaction({
+      categoryId: "fun",
+      transactionDate: "2026-10-01",
+      createdAt: "2026-10-30T12:00:00.000Z",
+      updatedAt: "2026-10-30T12:00:00.000Z",
+    });
+    store.dispatch(fulfilled(createTransaction, backDated, {}));
+    expect(order(store)).toEqual(["fun", "food", "old"]);
+
+    const edited = { ...backDated, categoryId: "food", amountAgorot: 200_000, updatedAt: "2026-10-30T13:00:00.000Z" };
+    store.dispatch(fulfilled(updateTransaction, edited, { id: backDated.id, changes: {} }));
+    // food is now over budget, so it leads regardless of activity.
+    expect(order(store)).toEqual(["food", "fun", "old"]);
+    expect(selectDashboard(store.getState()).snapshot.categories.find((c) => c.id === "food")?.isOver).toBe(true);
+
+    store.dispatch(fulfilled(deleteTransaction, undefined, backDated.id));
+    expect(order(store)).toEqual(["food", "fun", "old"]);
+    expect(selectDashboard(store.getState()).snapshot.categories.find((c) => c.id === "food")?.isOver).toBe(false);
+  });
+
+  it("falls back to the previous activity once the newest expense is deleted", () => {
+    const store = seeded();
+    const latest = makeTransaction({ categoryId: "fun", createdAt: "2026-10-30T12:00:00.000Z", updatedAt: "2026-10-30T12:00:00.000Z" });
+    store.dispatch(fulfilled(createTransaction, latest, {}));
+    expect(order(store)).toEqual(["fun", "food", "old"]);
+
+    store.dispatch(fulfilled(deleteTransaction, undefined, latest.id));
+    expect(order(store)).toEqual(["food", "fun", "old"]);
+  });
+
+  it("is memoized and does not reorder the dashboard's own array", () => {
+    const state = seeded().getState();
+    const ordered = selectSnapshotCategoriesInDisplayOrder(state);
+    expect(selectSnapshotCategoriesInDisplayOrder(state)).toBe(ordered);
+    expect(ordered).not.toBe(selectDashboard(state).snapshot.categories);
   });
 });
 

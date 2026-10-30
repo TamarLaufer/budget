@@ -56,7 +56,7 @@ export function NewTransactionScreen() {
   };
 
   return (
-    <ScrollScreen>
+    <ScrollScreen avoidKeyboard>
       <Stack.Screen options={{ title: strings.ADD_TRANSACTION }} />
       <TransactionForm
         initialValues={initialValues}

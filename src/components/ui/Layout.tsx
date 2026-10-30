@@ -1,5 +1,11 @@
-import type { ReactNode } from "react";
-import { RefreshControl, StyleSheet } from "react-native";
+import { useContext, type ReactNode } from "react";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  RefreshControl,
+  StyleSheet,
+} from "react-native";
+import { HeaderHeightContext } from "expo-router/react-navigation";
 import { useSafeAreaInsets, type EdgeInsets } from "react-native-safe-area-context";
 import { styled } from "styled-components/native";
 
@@ -27,18 +33,26 @@ interface ScrollScreenProps {
   withTopInset?: boolean;
   refreshing?: boolean;
   onRefresh?: () => void;
+  avoidKeyboard?: boolean;
 }
 
-export function ScrollScreen({ children, withTopInset = false, refreshing = false, onRefresh }: ScrollScreenProps) {
+export function ScrollScreen({ children, withTopInset = false, refreshing = false, onRefresh, avoidKeyboard = false, }: ScrollScreenProps) {
   const insets = useSafeAreaInsets();
-  return (
+  const headerHeight = useContext(HeaderHeightContext) ?? 0;
+    return (
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: colors.background }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={headerHeight}
+      enabled={avoidKeyboard}
+    >
     <Scroll
       $insets={insets}
       $withTopInset={withTopInset}
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
     >
       {children}
-    </Scroll>
+    </Scroll></KeyboardAvoidingView>
   );
 }
 

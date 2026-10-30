@@ -5,6 +5,7 @@ import { type Agorot } from "./money";
 import type {
   BudgetCategory,
   BudgetUsage,
+  CategorySummary,
   MonthlyDashboard,
   MonthlySnapshot,
 } from "./types";
@@ -87,6 +88,51 @@ export function buildMonthlySnapshot(categories: BudgetCategory[]): MonthlySnaps
       ...calculateUsage(category.budget, category.spent),
     })),
   };
+}
+
+type ActivityLike = TransactionLike & Pick<TransactionDto, "createdAt" | "updatedAt">;
+
+/**
+ * Latest entry time (creation or last edit, in ms) of each category's expenses. Uses the record
+ * timestamps, not transactionDate: a back-dated expense entered today is recent activity.
+ */
+export function lastExpenseActivityByCategory(transactions: readonly ActivityLike[]): Map<string, number> {
+  const latest = new Map<string, number>();
+  for (const t of transactions) {
+    // Same inclusion rule as spentByCategory.
+    if (t.type !== "EXPENSE" || !t.categoryId) continue;
+    const at = Math.max(Date.parse(t.createdAt), Date.parse(t.updatedAt));
+    if (Number.isNaN(at)) continue;
+    if (at > (latest.get(t.categoryId) ?? -Infinity)) latest.set(t.categoryId, at);
+  }
+  return latest;
+}
+
+/**
+ * Dashboard display order, returned as a new array: active over-budget categories by overspend
+ * (largest first), then the other active categories by latest expense activity (newest first,
+ * no activity last), then inactive categories ordered the same way. Ties go by name, then id.
+ */
+export function orderSnapshotCategories<C extends Pick<CategorySummary, "id" | "name" | "isActive" | "isOver" | "remaining">>(
+  categories: readonly C[],
+  lastActivity: ReadonlyMap<string, number>,
+): C[] {
+  const rank = (c: C) => (c.isActive ? 0 : 2) + (c.isOver ? 0 : 1);
+  const byText = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0);
+
+  return [...categories].sort((a, b) => {
+    const byRank = rank(a) - rank(b);
+    if (byRank !== 0) return byRank;
+    if (a.isOver) {
+      // remaining is negative when over: the more negative, the larger the overspend.
+      const byOverspend = a.remaining - b.remaining;
+      if (byOverspend !== 0) return byOverspend;
+    } else {
+      const byActivity = (lastActivity.get(b.id) ?? -Infinity) - (lastActivity.get(a.id) ?? -Infinity);
+      if (byActivity !== 0 && !Number.isNaN(byActivity)) return byActivity;
+    }
+    return byText(a.name, b.name) || byText(a.id, b.id);
+  });
 }
 
 export function buildMonthlyDashboard(

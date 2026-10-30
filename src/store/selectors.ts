@@ -1,7 +1,7 @@
 import { createSelector } from "@reduxjs/toolkit";
 
 import type { Role } from "../../shared/api";
-import { buildMonthlyDashboard } from "../budget/calculations";
+import { buildMonthlyDashboard, lastExpenseActivityByCategory, orderSnapshotCategories } from "../budget/calculations";
 import { isDateInPeriod, periodKey } from "../budget/period";
 import type { RootState } from "./index";
 import { idleLoad, type LoadState } from "./shared";
@@ -42,6 +42,13 @@ export const selectActivePaymentMethods = createSelector([paymentMethodSelectors
 export const selectDashboard = createSelector(
   [categorySelectors.selectAll, selectBudgetsForPeriod, selectTransactionsForPeriod],
   buildMonthlyDashboard,
+);
+
+/** The dashboard's categories in Monthly Snapshot display order (a sorted copy). */
+export const selectSnapshotCategoriesInDisplayOrder = createSelector(
+  [selectDashboard, selectTransactionsForPeriod],
+  (dashboard, transactions) =>
+    orderSnapshotCategories(dashboard.snapshot.categories, lastExpenseActivityByCategory(transactions)),
 );
 
 /** The data sets screens load; transactions and budgets are per month. */
