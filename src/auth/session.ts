@@ -1,6 +1,8 @@
 import {
   createUserWithEmailAndPassword,
+  EmailAuthProvider,
   onIdTokenChanged,
+  reauthenticateWithCredential,
   sendEmailVerification,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
@@ -11,6 +13,7 @@ import { configureApiClient } from "../api/client";
 import { unregisterDevice } from "../notifications/pushNotifications";
 import type { AppDispatch } from "../store";
 import { sessionEnded } from "../store/shared";
+import { loadLockPreference, lockSessionStarted } from "../store/slices/appLockSlice";
 import { firebaseUserChanged, loadMe, type FirebaseUserInfo } from "../store/slices/authSlice";
 import { getFirebaseAuth } from "./firebase";
 
@@ -36,8 +39,16 @@ export function startSession(dispatch: AppDispatch): () => void {
   return onIdTokenChanged(auth, (user) => {
     const uid = user?.uid ?? null;
     if (uid !== currentUid) {
+      // The first event reports the session Firebase restored from storage; a user appearing
+      // later has just typed their password.
+      const restored = currentUid === undefined;
       if (currentUid !== undefined) dispatch(sessionEnded());
       currentUid = uid;
+      // Lock state first, so no render sees the new user without it.
+      if (user) {
+        dispatch(lockSessionStarted({ uid: user.uid, restored }));
+        void dispatch(loadLockPreference(user.uid));
+      }
       dispatch(firebaseUserChanged(user ? toInfo(user) : null));
       if (user) void dispatch(loadMe());
     } else if (user) {
@@ -71,6 +82,24 @@ export async function refreshEmailVerification(): Promise<boolean> {
   return user.emailVerified;
 }
 
+/** Whether the signed-in account has a Firebase password that can unlock the app lock. */
+export function canReauthenticateWithPassword(): boolean {
+  const user = getFirebaseAuth().currentUser;
+  return Boolean(user?.email && user.providerData.some((p) => p.providerId === EmailAuthProvider.PROVIDER_ID));
+}
+
+/**
+ * Proves the current user knows their password, without signing in again or changing the
+ * session. Firebase checks it (and rate-limits attempts); nothing is stored. Resolves to the uid
+ * that was verified.
+ */
+export async function reauthenticateWithPassword(password: string): Promise<string> {
+  const user = getFirebaseAuth().currentUser;
+  if (!user?.email) throw Object.assign(new Error("No password account"), { code: "auth/user-mismatch" });
+  await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
+  return user.uid;
+}
+
 /** How long sign-out waits for the server to forget this device's push token. */
 const UNREGISTER_TIMEOUT_MS = 3_000;
 
@@ -93,6 +122,7 @@ export function authErrorKey(error: unknown): string {
     case "auth/invalid-credential":
     case "auth/wrong-password":
     case "auth/user-not-found":
+    case "auth/user-mismatch":
       return "INVALID_CREDENTIALS";
     case "auth/email-already-in-use":
       return "EMAIL_IN_USE";

@@ -178,6 +178,27 @@ export const strings = {
   BUDGET_ALERTS_HINT: "קבלו התראה כשמשק הבית מנצל 80% ו-100% מתקציב של קטגוריה החודש.",
   BUDGET_ALERTS_PERMISSION_DENIED: "ההרשאה להתראות לא ניתנה. אפשר להפעיל אותה בהגדרות המכשיר, תחת Spendo › התראות.",
   BUDGET_ALERTS_UNAVAILABLE: "לא ניתן היה להפעיל התראות במכשיר הזה. נסו שוב מאוחר יותר.",
+  BIOMETRIC_UNLOCK: "פתיחה בטביעת אצבע",
+  BIOMETRIC_UNLOCK_HINT: "Spendo תבקש טביעת אצבע בכל פתיחה ואחרי דקה ברקע. ההגדרה נשמרת רק במכשיר הזה ורק לחשבון שלך.",
+  BIOMETRIC_UNLOCK_ENABLE_PROMPT: "אישור פתיחה בטביעת אצבע",
+  BIOMETRIC_NO_HARDWARE: "המכשיר אינו תומך בטביעת אצבע.",
+  BIOMETRIC_NOT_ENROLLED: "לא הוגדרה טביעת אצבע במכשיר. אפשר להוסיף אותה בהגדרות המכשיר.",
+  BIOMETRIC_ENABLE_CANCELLED: "האימות בוטל, וההגדרה לא הופעלה.",
+  BIOMETRIC_ENABLE_FAILED: "האימות נכשל, וההגדרה לא הופעלה.",
+  BIOMETRIC_ENABLE_LOCKOUT: "יותר מדי ניסיונות. נסו שוב מאוחר יותר.",
+  BIOMETRIC_SAVE_FAILED: "לא ניתן היה לשמור את ההגדרה. נסו שוב.",
+
+  // ---- App lock ----
+  APP_LOCK_TITLE: "האפליקציה נעולה",
+  APP_LOCK_PROMPT: "פתיחת Spendo",
+  APP_LOCK_UNLOCK: "פתיחה בטביעת אצבע",
+  APP_LOCK_USE_PASSWORD: "כניסה עם סיסמה",
+  APP_LOCK_PASSWORD_SUBMIT: "פתיחה",
+  APP_LOCK_CANCELLED: "האימות בוטל. אפשר לנסות שוב.",
+  APP_LOCK_FAILED: "האימות נכשל. אפשר לנסות שוב.",
+  APP_LOCK_LOCKOUT: "יותר מדי ניסיונות. טביעת האצבע חסומה זמנית. אפשר להיכנס עם הסיסמה או להתנתק.",
+  APP_LOCK_UNAVAILABLE: "טביעת אצבע אינה זמינה כרגע במכשיר. אפשר להיכנס עם הסיסמה או להתנתק.",
+  APP_LOCK_SIGN_OUT_HINT: "כדי להיכנס בלי טביעת אצבע, התנתקו והתחברו מחדש.",
 
   // ---- API errors by code ----
   API_ERRORS: {

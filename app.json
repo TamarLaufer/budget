@@ -40,7 +40,10 @@
           "supportsRTL": true,
           "forcesRTL": true
         }
-      ]
+      ],
+      "expo-local-authentication",
+      "expo-secure-store",
+      "./plugins/withRecentsScreenshotDisabled"
     ],
     "experiments": {
       "typedRoutes": true

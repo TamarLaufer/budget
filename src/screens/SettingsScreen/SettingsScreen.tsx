@@ -4,6 +4,7 @@ import { Alert, Switch } from "react-native";
 
 import type { InvitableRole, MemberDto } from "../../../shared/api";
 import { errorMessage, messageFromUnknown } from "../../api/errorMessage";
+import { isBiometricPlatform } from "../../appLock/biometrics";
 import { signOut } from "../../auth/session";
 import { Button } from "../../components/ui/Button";
 import { ChipGroup } from "../../components/ui/ChipGroup";
@@ -30,6 +31,7 @@ import {
 import { format } from "../../strings/format";
 import { strings } from "../../strings/he";
 import { colors } from "../../theme";
+import { BiometricUnlockSection } from "./BiometricUnlockSection";
 
 /** Runs an async action and exposes busy/error state for the button that triggered it. */
 function useAction() {
@@ -65,6 +67,7 @@ export default function SettingsScreen() {
       <Title>{strings.TAB_SETTINGS}</Title>
       <ProfileSection />
       {isPushSupported ? <BudgetAlertsSection /> : null}
+      {isBiometricPlatform ? <BiometricUnlockSection /> : null}
       <HouseholdSection canManage={canManage} />
       <MembersSection />
       {canManage ? <InvitationsSection /> : null}

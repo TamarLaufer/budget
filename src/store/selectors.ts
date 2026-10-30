@@ -89,3 +89,18 @@ export const selectAppPhase = (s: RootState): AppPhase => {
   if (!me) return meStatus === "failed" ? "profileError" : "loadingProfile";
   return me.membership ? "ready" : "onboarding";
 };
+
+export type LockGate = "checking" | "locked" | "unlocked";
+
+/**
+ * Whether the signed-in user's content may be shown. Lock state recorded for any other user (or
+ * none yet) counts as "checking", so it can never apply to the wrong account.
+ */
+export const selectLockGate = (s: RootState): LockGate => {
+  const uid = s.auth.firebaseUser?.uid;
+  if (!uid || s.appLock.uid !== uid) return "checking";
+  return s.appLock.status;
+};
+
+/** Fingerprint unlock is on for the signed-in user. */
+export const selectLockEnabled = (s: RootState) => selectLockGate(s) !== "checking" && s.appLock.enabled;
