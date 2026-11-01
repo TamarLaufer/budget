@@ -1,4 +1,4 @@
-import { HeaderContainer, Month, MonthRow, NavButton, NavText, Title } from "./Header.styles";
+import { HeaderContainer, Month, MonthRow, NavButton, Title } from "./Header.styles";
 import { strings } from "../../strings/he";
 import { formatMonthYear } from "../../budget/calculations";
 import { Feather } from "@expo/vector-icons";

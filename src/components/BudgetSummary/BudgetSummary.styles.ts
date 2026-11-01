@@ -1,7 +1,7 @@
 import { StyleSheet } from "react-native";
 import { styled } from "styled-components/native";
 
-import { colors, fontSize, radius, spacing } from "../../theme";
+import { colors, fontSize, spacing } from "../../theme";
 
 export const Card = styled.View`
   background-color: ${colors.surface};
