@@ -32,6 +32,7 @@ export const fetchCategories = apiThunk(
   (options, state) => shouldFetch(state.categories.load, options?.force),
 );
 export const createCategory = apiThunk("categories/create", (name: string) => api.categories.create({ name }));
+
 export const updateCategory = apiThunk(
   "categories/update",
   ({ id, changes }: { id: string; changes: UpdateCategoryRequest }) => api.categories.update(id, changes),

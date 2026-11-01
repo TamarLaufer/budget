@@ -1,4 +1,6 @@
-import { useState } from "react";
+import { useFocusEffect } from "expo-router";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { AppState } from "react-native";
 
 import type { CategoryDto } from "../../../shared/api";
 import { errorMessage, messageFromUnknown } from "../../api/errorMessage";
@@ -50,15 +52,49 @@ function NewCategoryCard() {
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The attempt whose failure may still be shown; dismissing moves on, so a late response can't.
+  const attempt = useRef(0);
+
+  const dismissError = useCallback(() => {
+    attempt.current += 1;
+    setError(null);
+  }, []);
+
+  // Clear the form when leaving the Categories tab.
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setName("");
+        dismissError();
+      };
+    }, [dismissError]),
+  );
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", (state) => {
+      if (state === "background") dismissError();
+    });
+    return () => subscription.remove();
+  }, [dismissError]);
+
+  const changeName = (value: string) => {
+    setName(value);
+    dismissError();
+  };
 
   const submit = async () => {
+    dismissError();
+    const current = attempt.current;
+    const submitted = name;
     setBusy(true);
-    setError(null);
     try {
-      await dispatch(createCategory(name.trim())).unwrap();
-      setName("");
+      await dispatch(createCategory(submitted.trim())).unwrap();
+      // Keep anything typed while the request was in flight.
+      if (attempt.current === current) {
+        setName((latest) => (latest === submitted ? "" : latest));
+      }
     } catch (e) {
-      setError(messageFromUnknown(e));
+      if (attempt.current === current) setError(messageFromUnknown(e));
     } finally {
       setBusy(false);
     }
@@ -66,9 +102,9 @@ function NewCategoryCard() {
 
   return (
     <Card>
-      <TextField label={strings.NEW_CATEGORY} placeholder={strings.CATEGORY_NAME} value={name} onChangeText={setName} maxLength={60} />
+      <TextField label={strings.NEW_CATEGORY} placeholder={strings.CATEGORY_NAME} value={name} onChangeText={changeName} maxLength={60} />
       <ErrorBanner message={error} />
-      <Button label={strings.ADD} onPress={submit} loading={busy} disabled={!name.trim()} />
+      <Button label={strings.ADD} onPress={() => void submit()} loading={busy} disabled={!name.trim()} />
     </Card>
   );
 }
@@ -80,14 +116,37 @@ function CategoryItem({ category, canManage }: { category: CategoryDto; canManag
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const save = async (changes: { name?: string; isActive?: boolean }) => {
-    setBusy(true);
+  const attempt = useRef(0);
+
+  const dismissError = useCallback(() => {
+    attempt.current += 1;
     setError(null);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      return () => {
+        setName("");
+        dismissError();
+        setEditing(false);
+      };
+    }, [dismissError]),
+  );
+
+  const save = async (changes: { name?: string; isActive?: boolean }) => {
+    dismissError();
+    const current = attempt.current;
+    setBusy(true);
     try {
       await dispatch(updateCategory({ id: category.id, changes })).unwrap();
-      setEditing(false);
+      if (attempt.current === current) {
+        setEditing(false);
+      }
+      
     } catch (e) {
-      setError(messageFromUnknown(e));
+      if (attempt.current === current) {
+        setError(messageFromUnknown(e));
+      }
     } finally {
       setBusy(false);
     }
@@ -96,7 +155,10 @@ function CategoryItem({ category, canManage }: { category: CategoryDto; canManag
   return (
     <Card>
       {editing ? (
-        <TextField value={name} onChangeText={setName} maxLength={60} autoFocus accessibilityLabel={strings.CATEGORY_NAME} />
+        <TextField value={name} onChangeText={(value) => {
+          setName(value);
+          dismissError();
+        }} maxLength={60} autoFocus accessibilityLabel={strings.CATEGORY_NAME} />
       ) : (
         <SpaceBetweenRow>
           <BodyText>{category.name}</BodyText>
@@ -115,12 +177,17 @@ function CategoryItem({ category, canManage }: { category: CategoryDto; canManag
                 onPress={() => {
                   setName(category.name);
                   setEditing(false);
+                  dismissError();
                 }}
               />
             </>
           ) : (
             <>
-              <Button label={strings.RENAME} compact variant="secondary" onPress={() => setEditing(true)} />
+              <Button label={strings.RENAME} compact variant="secondary" onPress={() => {
+                setName(category.name);
+                dismissError();
+                setEditing(true);
+              }} />
               <Button
                 label={category.isActive ? strings.DEACTIVATE : strings.ACTIVATE}
                 compact
