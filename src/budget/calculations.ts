@@ -33,6 +33,14 @@ export function calculateUsage(budget: Agorot, spent: Agorot): BudgetUsage {
   };
 }
 
+/**
+ * Usage of spending with no budget configured: nothing to compare against, so never over budget.
+ * An explicit budget of 0 is still a budget and goes through calculateUsage.
+ */
+export function unbudgetedUsage(spent: Agorot): BudgetUsage {
+  return { budget: 0, spent, remaining: 0, percentUsed: 0, fill: 0, isOver: false };
+}
+
 /** Sum of expenses per category id. Income is ignored. */
 export function spentByCategory(transactions: readonly TransactionLike[]): Map<string, Agorot> {
   const totals = new Map<string, Agorot>();
@@ -68,6 +76,7 @@ export function buildCategoryBudgets(
       isActive: category.isActive,
       budget: budgetByCategory.get(category.id) ?? 0,
       spent: spent.get(category.id) ?? 0,
+      hasBudget: budgetByCategory.has(category.id),
     }))
     .filter((c) => c.isActive || c.budget > 0 || c.spent > 0);
 }
@@ -75,17 +84,20 @@ export function buildCategoryBudgets(
 export function buildMonthlySnapshot(categories: BudgetCategory[]): MonthlySnapshot {
   let totalBudget: Agorot = 0;
   let totalSpent: Agorot = 0;
+  let anyBudget = false;
 
   for (const category of categories) {
     totalBudget += category.budget;
+    // Spending without a budget still counts toward the month's expenses.
     totalSpent += category.spent;
+    anyBudget ||= category.hasBudget;
   }
 
   return {
-    totals: calculateUsage(totalBudget, totalSpent),
+    totals: anyBudget ? calculateUsage(totalBudget, totalSpent) : unbudgetedUsage(totalSpent),
     categories: categories.map((category) => ({
       ...category,
-      ...calculateUsage(category.budget, category.spent),
+      ...(category.hasBudget ? calculateUsage(category.budget, category.spent) : unbudgetedUsage(category.spent)),
     })),
   };
 }

@@ -82,8 +82,8 @@ describe("buildCategoryBudgets", () => {
       [expense("food", 240_000), expense("fun", 95_000)],
     );
     expect(result).toEqual([
-      { id: "food", name: "Food", isActive: true, budget: 300_000, spent: 240_000 },
-      { id: "fun", name: "Fun", isActive: true, budget: 0, spent: 95_000 },
+      { id: "food", name: "Food", isActive: true, budget: 300_000, spent: 240_000, hasBudget: true },
+      { id: "fun", name: "Fun", isActive: true, budget: 0, spent: 95_000, hasBudget: false },
     ]);
   });
 
@@ -97,12 +97,74 @@ describe("buildCategoryBudgets", () => {
 describe("buildMonthlySnapshot", () => {
   it("computes overall usage from totals, not by averaging categories", () => {
     const snapshot = buildMonthlySnapshot([
-      { id: "a", name: "A", isActive: true, budget: 300_000, spent: 240_000 },
-      { id: "b", name: "B", isActive: true, budget: 80_000, spent: 95_000 },
-      { id: "c", name: "C", isActive: true, budget: 100_000, spent: 70_000 },
+      { id: "a", name: "A", isActive: true, budget: 300_000, spent: 240_000, hasBudget: true },
+      { id: "b", name: "B", isActive: true, budget: 80_000, spent: 95_000, hasBudget: true },
+      { id: "c", name: "C", isActive: true, budget: 100_000, spent: 70_000, hasBudget: true },
     ]);
     expect(snapshot.totals).toMatchObject({ budget: 480_000, spent: 405_000, remaining: 75_000, isOver: false });
     expect(snapshot.categories.find((c) => c.id === "b")).toMatchObject({ isOver: true, remaining: -15_000 });
+  });
+});
+
+describe("missing vs configured budgets", () => {
+  const snapshotOf = (budgets: Pick<MonthlyBudgetDto, "categoryId" | "amountAgorot">[], transactions: Tx[]) =>
+    buildMonthlySnapshot(
+      buildCategoryBudgets([category("food", "Food"), category("fun", "Fun"), category("zero", "Zero")], budgets, transactions),
+    );
+  const byId = (snapshot: ReturnType<typeof buildMonthlySnapshot>, id: string) =>
+    snapshot.categories.find((c) => c.id === id);
+
+  it("never marks a category without a budget as over budget, whatever it spent", () => {
+    const fun = byId(snapshotOf([], [expense("fun", 999_999)]), "fun");
+    expect(fun).toMatchObject({ hasBudget: false, budget: 0, spent: 999_999, isOver: false, remaining: 0, fill: 0 });
+  });
+
+  it("flags a configured positive budget only once spending exceeds it", () => {
+    expect(byId(snapshotOf([budget("food", 100_000)], [expense("food", 99_999)]), "food")).toMatchObject({
+      hasBudget: true,
+      isOver: false,
+      remaining: 1,
+    });
+    expect(byId(snapshotOf([budget("food", 100_000)], [expense("food", 100_001)]), "food")).toMatchObject({
+      hasBudget: true,
+      isOver: true,
+      remaining: -1,
+    });
+  });
+
+  it("treats an explicit zero budget as configured: any spending is over it", () => {
+    const snapshot = snapshotOf([budget("zero", 0)], [expense("zero", 500), expense("fun", 500)]);
+    expect(byId(snapshot, "zero")).toMatchObject({ hasBudget: true, isOver: true, remaining: -500 });
+    expect(byId(snapshot, "fun")).toMatchObject({ hasBudget: false, isOver: false });
+  });
+
+  it("counts unbudgeted spending in the month's expense totals", () => {
+    const snapshot = snapshotOf([budget("food", 100_000)], [expense("food", 30_000), expense("fun", 20_000)]);
+    expect(snapshot.totals).toMatchObject({ budget: 100_000, spent: 50_000, remaining: 50_000, isOver: false });
+    const dashboard = buildMonthlyDashboard(
+      [category("food", "Food"), category("fun", "Fun")],
+      [budget("food", 100_000)],
+      [expense("food", 30_000), expense("fun", 20_000), income(100_000)],
+    );
+    expect(dashboard.net).toBe(50_000);
+  });
+
+  it("does not report the month as over budget when no budget is configured at all", () => {
+    expect(snapshotOf([], [expense("fun", 20_000)]).totals).toMatchObject({ spent: 20_000, isOver: false });
+  });
+
+  it("sorts unbudgeted categories by activity among the non-over ones, never into the over group", () => {
+    const snapshot = snapshotOf(
+      [budget("food", 100), budget("zero", 100_000)],
+      [expense("food", 500), expense("fun", 999_999), expense("zero", 10)],
+    );
+    const activity = new Map([
+      ["fun", Date.parse("2026-10-30T10:00:00Z")],
+      ["zero", Date.parse("2026-10-01T10:00:00Z")],
+    ]);
+    const ordered = orderSnapshotCategories(snapshot.categories, activity);
+    expect(ordered.map((c) => c.id)).toEqual(["food", "fun", "zero"]);
+    expect(ordered.filter((c) => c.isOver).map((c) => c.id)).toEqual(["food"]);
   });
 });
 

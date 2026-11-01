@@ -178,6 +178,8 @@ export const strings = {
   BUDGET_ALERTS_HINT: "קבלו התראה כשמשק הבית מנצל 80% ו-100% מתקציב של קטגוריה החודש.",
   BUDGET_ALERTS_PERMISSION_DENIED: "ההרשאה להתראות לא ניתנה. אפשר להפעיל אותה בהגדרות המכשיר, תחת Spendo › התראות.",
   BUDGET_ALERTS_UNAVAILABLE: "לא ניתן היה להפעיל התראות במכשיר הזה. נסו שוב מאוחר יותר.",
+  BUDGET_ALERTS_NEEDS_PERMISSION: "התראות התקציב מופעלות, אבל למכשיר הזה אין הרשאה להציג התראות.",
+  ENABLE_NOTIFICATIONS: "הפעלת התראות",
   BIOMETRIC_UNLOCK: "פתיחה בטביעת אצבע",
   BIOMETRIC_UNLOCK_HINT: "Spendo תבקש טביעת אצבע בכל פתיחה ואחרי דקה ברקע. ההגדרה נשמרת רק במכשיר הזה ורק לחשבון שלך.",
   BIOMETRIC_UNLOCK_ENABLE_PROMPT: "אישור פתיחה בטביעת אצבע",

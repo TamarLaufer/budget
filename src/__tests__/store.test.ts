@@ -197,6 +197,30 @@ describe("snapshot category order selector", () => {
     expect(order(store)).toEqual(["food", "fun", "old"]);
   });
 
+  it("keeps a category without a budget out of the over-budget group and the over-only filter", () => {
+    const store = seeded();
+    respond(store, fetchCategories,
+        [
+          makeCategory({ id: "food", name: "Food" }),
+          makeCategory({ id: "fun", name: "Fun" }),
+          makeCategory({ id: "old", name: "Old", isActive: false }),
+          makeCategory({ id: "misc", name: "Misc" }),
+        ],
+        undefined);
+    store.dispatch(fulfilled(createTransaction,
+        makeTransaction({ categoryId: "misc", amountAgorot: 900_000, createdAt: "2026-10-30T12:00:00.000Z", updatedAt: "2026-10-30T12:00:00.000Z" }),
+        {}));
+
+    const ordered = selectSnapshotCategoriesInDisplayOrder(store.getState());
+    expect(ordered.find((c) => c.id === "misc")).toMatchObject({ hasBudget: false, isOver: false, spent: 900_000 });
+    // Newest activity among the categories that are not over budget.
+    expect(ordered.map((c) => c.id)).toEqual(["misc", "food", "fun", "old"]);
+    // What the "over budget only" toggle shows: only the inactive category over its configured budget.
+    expect(ordered.filter((c) => c.isOver).map((c) => c.id)).toEqual(["old"]);
+    // food 1,000 + fun 1,000 + old 50,000 + unbudgeted misc 900,000.
+    expect(selectDashboard(store.getState()).snapshot.totals.spent).toBe(952_000);
+  });
+
   it("is memoized and does not reorder the dashboard's own array", () => {
     const state = seeded().getState();
     const ordered = selectSnapshotCategoriesInDisplayOrder(state);

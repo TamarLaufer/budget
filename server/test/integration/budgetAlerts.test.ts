@@ -281,6 +281,18 @@ describe("budget alerts: recipients", () => {
     await spend(owner, zero, 500_000);
     expect(ctx.push.sent).toEqual([]);
   });
+
+  it("still alerts for a budgeted category while unbudgeted categories have spending", async () => {
+    const { owner, food } = await setup();
+    const noBudget = await createCategory(ctx, owner, "ללא תקציב");
+    await spend(owner, noBudget, 900_000);
+    await spend(owner, food, 170_000);
+    await spend(owner, noBudget, 900_000);
+    await spend(owner, food, 40_000);
+
+    expect(titles()).toEqual([TITLE_80, TITLE_100]);
+    expect(ctx.push.sent.map((m) => (m.data as { categoryId: string }).categoryId)).toEqual([food.id, food.id]);
+  });
 });
 
 describe("budget alerts: devices and failures", () => {

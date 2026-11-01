@@ -5,9 +5,11 @@ import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "../store";
 import { periodSelected } from "../store/slices/periodSlice";
 import { budgetAlertPeriod, isPushSupported, registerDevice } from "./pushNotifications";
+import { useNotificationPermission } from "./useNotificationPermission";
 
 /**
- * Keeps this device registered while budget alerts are enabled, and opens the Monthly Snapshot
+ * Keeps this device registered while budget alerts are enabled (again once permission is granted,
+ * e.g. after a reinstall and a trip to system settings), and opens the Monthly Snapshot
  * of the alert's month when a notification is tapped (also when the tap launched the app).
  * `ready` is true once the signed-in user's app screens exist.
  */
@@ -16,9 +18,10 @@ export function useBudgetAlertNotifications(ready: boolean): void {
   const enabled = useAppSelector((s) => s.auth.me?.notifications.budgetAlertsEnabled ?? false);
   const userId = useAppSelector((s) => s.auth.me?.user.id ?? null);
   const response = Notifications.useLastNotificationResponse();
+  const granted = useNotificationPermission().permission?.granted ?? false;
 
   useEffect(() => {
-    if (!ready || !enabled || !userId || !isPushSupported) return;
+    if (!ready || !enabled || !userId || !isPushSupported || !granted) return;
     // Failures are retried on the next start or token refresh; the setting itself stays on.
     void registerDevice(userId).catch(() => undefined);
     // The event already carries the token: passing it on avoids a fetch that would emit another event.
@@ -26,7 +29,7 @@ export function useBudgetAlertNotifications(ready: boolean): void {
       (token) => void registerDevice(userId, token).catch(() => undefined),
     );
     return () => subscription.remove();
-  }, [ready, enabled, userId]);
+  }, [ready, enabled, userId, granted]);
 
   useEffect(() => {
     if (!ready || !response) return;

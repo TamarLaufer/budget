@@ -1,3 +1,4 @@
+import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import { Alert, Switch } from "react-native";
@@ -13,6 +14,7 @@ import { BodyText, Card, MutedText, Row, ScrollScreen, SectionTitle, SpaceBetwee
 import { TextField } from "../../components/ui/TextField";
 import { useScreenData } from "../../hooks/useScreenData";
 import { isPushSupported, registerDevice, requestPermission } from "../../notifications/pushNotifications";
+import { useNotificationPermission } from "../../notifications/useNotificationPermission";
 import { useAppDispatch, useAppSelector } from "../../store";
 import { paymentMethodSelectors, selectCanManage, type Dataset } from "../../store/selectors";
 import { householdChanged } from "../../store/shared";
@@ -105,30 +107,48 @@ function ProfileSection() {
  * Opt-in for budget threshold notifications. The server stores and enforces the preference, so
  * turning it off stops alerts even while the app is closed.
  */
-function BudgetAlertsSection() {
+export function BudgetAlertsSection() {
   const dispatch = useAppDispatch();
   const enabled = useAppSelector((s) => s.auth.me?.notifications.budgetAlertsEnabled ?? false);
   const userId = useAppSelector((s) => s.auth.me?.user.id ?? null);
   const [notice, setNotice] = useState<string | null>(null);
   const { busy, error, run } = useAction();
+  const { permission, recheck } = useNotificationPermission();
+  // The saved preference is per account; permission is per install (lost on reinstall).
+  const needsPermission = enabled && permission !== null && !permission.granted;
+
+  /** Asks for permission and registers this install. False (with a notice) when it can't. */
+  const grantAndRegister = async (): Promise<boolean> => {
+    const granted = await requestPermission();
+    await recheck();
+    if (!granted) {
+      setNotice(strings.BUDGET_ALERTS_PERMISSION_DENIED);
+      return false;
+    }
+    try {
+      if (!userId) throw new Error("No profile");
+      await registerDevice(userId);
+    } catch {
+      setNotice(strings.BUDGET_ALERTS_UNAVAILABLE);
+      return false;
+    }
+    return true;
+  };
 
   const toggle = (value: boolean) =>
     void run(async () => {
       setNotice(null);
-      if (value) {
-        if (!(await requestPermission())) {
-          setNotice(strings.BUDGET_ALERTS_PERMISSION_DENIED);
-          return;
-        }
-        try {
-          if (!userId) throw new Error("No profile");
-          await registerDevice(userId);
-        } catch {
-          setNotice(strings.BUDGET_ALERTS_UNAVAILABLE);
-          return;
-        }
-      }
+      if (value && !(await grantAndRegister())) return;
       await dispatch(updateBudgetAlerts(value)).unwrap();
+    });
+
+  // When the system no longer shows the prompt, only its settings can grant permission; the
+  // foreground recheck then picks up the change and the root hook registers the device.
+  const enablePermission = () =>
+    void run(async () => {
+      setNotice(null);
+      if (permission?.canAskAgain) await grantAndRegister();
+      else await Linking.openSettings();
     });
 
   return (
@@ -146,6 +166,19 @@ function BudgetAlertsSection() {
         />
       </SpaceBetweenRow>
       <MutedText>{strings.BUDGET_ALERTS_HINT}</MutedText>
+      {needsPermission ? (
+        <>
+          <InfoBanner message={strings.BUDGET_ALERTS_NEEDS_PERMISSION} />
+          <Button
+            label={strings.ENABLE_NOTIFICATIONS}
+            variant="secondary"
+            compact
+            onPress={enablePermission}
+            disabled={busy}
+            testID="budget-alerts-enable-permission"
+          />
+        </>
+      ) : null}
       <InfoBanner message={notice} />
       <ErrorBanner message={error} />
     </Card>

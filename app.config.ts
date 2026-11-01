@@ -42,7 +42,10 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         {
           android: {
             usesCleartextTraffic: isDev && apiUrl.startsWith("http://"),
-            cmakeVersion: "3.31.6",
+            // Windows-only workaround: the SDK's default CMake (3.22.1) fails local builds with
+            // "ninja: manifest 'build.ninja' still dirty". Linux EAS builders don't have 3.31.6,
+            // so they keep the default.
+            ...(process.platform === "win32" ? { cmakeVersion: "3.31.6" } : {}),
           },
         },
       ],
