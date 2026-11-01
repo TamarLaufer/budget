@@ -21,3 +21,11 @@ export async function findOrCreateByFirebaseUid(input: { firebaseUid: string; em
 export function updateDisplayName(userId: string, displayName: string | null, db: Db = getPrisma()) {
   return db.user.update({ where: { id: userId }, data: { displayName } });
 }
+
+export function findById(userId: string, db: Db = getPrisma()) {
+  return db.user.findUnique({ where: { id: userId } });
+}
+
+export function updateBudgetAlertsEnabled(userId: string, budgetAlertsEnabled: boolean, db: Db = getPrisma()) {
+  return db.user.update({ where: { id: userId }, data: { budgetAlertsEnabled } });
+}

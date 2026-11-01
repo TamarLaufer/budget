@@ -34,6 +34,9 @@ export const loadMe = apiThunk("auth/loadMe", () => api.me.get());
 export const updateDisplayName = apiThunk("auth/updateDisplayName", (displayName: string | null) =>
   api.me.update(displayName),
 );
+export const updateBudgetAlerts = apiThunk("auth/updateBudgetAlerts", (budgetAlertsEnabled: boolean) =>
+  api.notifications.updatePreferences({ budgetAlertsEnabled }),
+);
 
 const authSlice = createSlice({
   name: "auth",
@@ -60,6 +63,9 @@ const authSlice = createSlice({
       })
       .addCase(updateDisplayName.fulfilled, (state, action) => {
         state.me = action.payload;
+      })
+      .addCase(updateBudgetAlerts.fulfilled, (state, action) => {
+        if (state.me) state.me.notifications = action.payload;
       })
       // Membership changes come back from the server; mirror them without refetching /me.
       .addCase(createHousehold.fulfilled, (state, action) => {

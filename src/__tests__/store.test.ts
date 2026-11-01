@@ -4,7 +4,9 @@ import {
   selectBudgetsForPeriod,
   selectCanManage,
   selectDashboard,
-  selectPeriodLoad,
+  combineLoads,
+  selectLoad,
+  selectSnapshotCategoriesInDisplayOrder,
   selectTransactionsForPeriod,
 } from "../store/selectors";
 import { householdChanged, sessionEnded } from "../store/shared";
@@ -19,7 +21,7 @@ import {
   fetchMonthTransactions,
   updateTransaction,
 } from "../store/slices/transactionsSlice";
-import { fulfilled, makeBudget, makeCategory, makeTransaction, meWithHousehold } from "../test-utils/fixtures";
+import { fulfilled, pending, respond, makeBudget, makeCategory, makeTransaction, meWithHousehold } from "../test-utils/fixtures";
 
 const october = { year: 2026, month: 10 };
 const september = { year: 2026, month: 9 };
@@ -53,11 +55,11 @@ describe("transactions reducer", () => {
     const store = storeAtOctober();
     const septTx = makeTransaction({ transactionDate: "2026-09-20" });
     const deletedElsewhere = makeTransaction({ transactionDate: "2026-10-05" });
-    store.dispatch(fulfilled(fetchMonthTransactions, [septTx], september));
-    store.dispatch(fulfilled(fetchMonthTransactions, [deletedElsewhere], october));
+    respond(store, fetchMonthTransactions, [septTx], september);
+    respond(store, fetchMonthTransactions, [deletedElsewhere], october);
 
     const fresh = makeTransaction({ transactionDate: "2026-10-06" });
-    store.dispatch(fulfilled(fetchMonthTransactions, [fresh], october));
+    respond(store, fetchMonthTransactions, [fresh], october);
 
     expect(selectTransactionsForPeriod(store.getState()).map((t) => t.id)).toEqual([fresh.id]);
     store.dispatch(periodSelected(september));
@@ -68,7 +70,7 @@ describe("transactions reducer", () => {
     const store = storeAtOctober();
     const a = makeTransaction({ transactionDate: "2026-10-01" });
     const b = makeTransaction({ transactionDate: "2026-10-20" });
-    store.dispatch(fulfilled(fetchMonthTransactions, [a, b], october));
+    respond(store, fetchMonthTransactions, [a, b], october);
     expect(selectTransactionsForPeriod(store.getState()).map((t) => t.id)).toEqual([b.id, a.id]);
   });
 });
@@ -77,22 +79,16 @@ describe("dashboard selector", () => {
   function seeded() {
     const store = storeAtOctober();
     const food = makeCategory({ id: "food", name: "Food" });
-    store.dispatch(fulfilled(fetchCategories, [food], undefined));
-    store.dispatch(fulfilled(fetchMonthBudgets, [makeBudget({ categoryId: "food", year: 2026, month: 9, amountAgorot: 50_000 })], september));
-    store.dispatch(fulfilled(fetchMonthBudgets, [makeBudget({ categoryId: "food", amountAgorot: 100_000 })], october));
-    store.dispatch(
-      fulfilled(fetchMonthTransactions, [makeTransaction({ transactionDate: "2026-09-15", amountAgorot: 70_000 })], september),
-    );
-    store.dispatch(
-      fulfilled(
-        fetchMonthTransactions,
+    respond(store, fetchCategories, [food], undefined);
+    respond(store, fetchMonthBudgets, [makeBudget({ categoryId: "food", year: 2026, month: 9, amountAgorot: 50_000 })], september);
+    respond(store, fetchMonthBudgets, [makeBudget({ categoryId: "food", amountAgorot: 100_000 })], october);
+    respond(store, fetchMonthTransactions, [makeTransaction({ transactionDate: "2026-09-15", amountAgorot: 70_000 })], september);
+    respond(store, fetchMonthTransactions,
         [
           makeTransaction({ amountAgorot: 120_000 }),
           makeTransaction({ type: "INCOME", categoryId: null, amountAgorot: 1_000_000 }),
         ],
-        october,
-      ),
-    );
+        october);
     return store;
   }
 
@@ -136,29 +132,131 @@ describe("dashboard selector", () => {
   });
 });
 
+describe("snapshot category order selector", () => {
+  function seeded() {
+    const store = storeAtOctober();
+    respond(store, fetchCategories,
+        [
+          makeCategory({ id: "food", name: "Food" }),
+          makeCategory({ id: "fun", name: "Fun" }),
+          makeCategory({ id: "old", name: "Old", isActive: false }),
+        ],
+        undefined);
+    respond(store, fetchMonthBudgets,
+        [
+          makeBudget({ categoryId: "food", amountAgorot: 100_000 }),
+          makeBudget({ categoryId: "fun", amountAgorot: 100_000 }),
+          makeBudget({ categoryId: "old", amountAgorot: 1 }),
+        ],
+        october);
+    respond(store, fetchMonthTransactions,
+        [
+          makeTransaction({ categoryId: "food", transactionDate: "2026-10-20", createdAt: "2026-10-20T09:00:00.000Z", updatedAt: "2026-10-20T09:00:00.000Z" }),
+          makeTransaction({ categoryId: "fun", transactionDate: "2026-10-05", createdAt: "2026-10-05T09:00:00.000Z", updatedAt: "2026-10-05T09:00:00.000Z" }),
+          makeTransaction({ categoryId: "old", amountAgorot: 50_000, createdAt: "2026-10-29T09:00:00.000Z", updatedAt: "2026-10-29T09:00:00.000Z" }),
+        ],
+        october);
+    return store;
+  }
+  const order = (store: ReturnType<typeof createStore>) =>
+    selectSnapshotCategoriesInDisplayOrder(store.getState()).map((c) => c.id);
+
+  it("orders active categories by recent activity and keeps over-budget inactive ones last", () => {
+    expect(order(seeded())).toEqual(["food", "fun", "old"]);
+  });
+
+  it("counts a back-dated expense entered now as recent, and reorders after create, edit and delete", () => {
+    const store = seeded();
+    const backDated = makeTransaction({
+      categoryId: "fun",
+      transactionDate: "2026-10-01",
+      createdAt: "2026-10-30T12:00:00.000Z",
+      updatedAt: "2026-10-30T12:00:00.000Z",
+    });
+    store.dispatch(fulfilled(createTransaction, backDated, {}));
+    expect(order(store)).toEqual(["fun", "food", "old"]);
+
+    const edited = { ...backDated, categoryId: "food", amountAgorot: 200_000, updatedAt: "2026-10-30T13:00:00.000Z" };
+    store.dispatch(fulfilled(updateTransaction, edited, { id: backDated.id, changes: {} }));
+    // food is now over budget, so it leads regardless of activity.
+    expect(order(store)).toEqual(["food", "fun", "old"]);
+    expect(selectDashboard(store.getState()).snapshot.categories.find((c) => c.id === "food")?.isOver).toBe(true);
+
+    store.dispatch(fulfilled(deleteTransaction, undefined, backDated.id));
+    expect(order(store)).toEqual(["food", "fun", "old"]);
+    expect(selectDashboard(store.getState()).snapshot.categories.find((c) => c.id === "food")?.isOver).toBe(false);
+  });
+
+  it("falls back to the previous activity once the newest expense is deleted", () => {
+    const store = seeded();
+    const latest = makeTransaction({ categoryId: "fun", createdAt: "2026-10-30T12:00:00.000Z", updatedAt: "2026-10-30T12:00:00.000Z" });
+    store.dispatch(fulfilled(createTransaction, latest, {}));
+    expect(order(store)).toEqual(["fun", "food", "old"]);
+
+    store.dispatch(fulfilled(deleteTransaction, undefined, latest.id));
+    expect(order(store)).toEqual(["food", "fun", "old"]);
+  });
+
+  it("keeps a category without a budget out of the over-budget group and the over-only filter", () => {
+    const store = seeded();
+    respond(store, fetchCategories,
+        [
+          makeCategory({ id: "food", name: "Food" }),
+          makeCategory({ id: "fun", name: "Fun" }),
+          makeCategory({ id: "old", name: "Old", isActive: false }),
+          makeCategory({ id: "misc", name: "Misc" }),
+        ],
+        undefined);
+    store.dispatch(fulfilled(createTransaction,
+        makeTransaction({ categoryId: "misc", amountAgorot: 900_000, createdAt: "2026-10-30T12:00:00.000Z", updatedAt: "2026-10-30T12:00:00.000Z" }),
+        {}));
+
+    const ordered = selectSnapshotCategoriesInDisplayOrder(store.getState());
+    expect(ordered.find((c) => c.id === "misc")).toMatchObject({ hasBudget: false, isOver: false, spent: 900_000 });
+    // Newest activity among the categories that are not over budget.
+    expect(ordered.map((c) => c.id)).toEqual(["misc", "food", "fun", "old"]);
+    // What the "over budget only" toggle shows: only the inactive category over its configured budget.
+    expect(ordered.filter((c) => c.isOver).map((c) => c.id)).toEqual(["old"]);
+    // food 1,000 + fun 1,000 + old 50,000 + unbudgeted misc 900,000.
+    expect(selectDashboard(store.getState()).snapshot.totals.spent).toBe(952_000);
+  });
+
+  it("is memoized and does not reorder the dashboard's own array", () => {
+    const state = seeded().getState();
+    const ordered = selectSnapshotCategoriesInDisplayOrder(state);
+    expect(selectSnapshotCategoriesInDisplayOrder(state)).toBe(ordered);
+    expect(ordered).not.toBe(selectDashboard(state).snapshot.categories);
+  });
+});
+
+/** What the dashboard's load state was before screens chose their own data sets. */
+const periodLoad = (state: ReturnType<ReturnType<typeof createStore>["getState"]>) =>
+  combineLoads((["transactions", "budgets", "categories"] as const).map((d) => selectLoad(state, d)));
+
 describe("load state", () => {
   it("is loaded only when transactions, budgets and categories are all in", () => {
     const store = storeAtOctober();
-    expect(selectPeriodLoad(store.getState()).loaded).toBe(false);
-    store.dispatch(fulfilled(fetchMonthTransactions, [], october));
-    store.dispatch(fulfilled(fetchMonthBudgets, [], october));
-    expect(selectPeriodLoad(store.getState()).loaded).toBe(false);
-    store.dispatch(fulfilled(fetchCategories, [], undefined));
-    expect(selectPeriodLoad(store.getState())).toEqual({ status: "succeeded", error: null, loaded: true });
+    expect(periodLoad(store.getState()).loaded).toBe(false);
+    respond(store, fetchMonthTransactions, [], october);
+    respond(store, fetchMonthBudgets, [], october);
+    expect(periodLoad(store.getState()).loaded).toBe(false);
+    respond(store, fetchCategories, [], undefined);
+    expect(periodLoad(store.getState())).toEqual({ status: "succeeded", error: null, loaded: true });
   });
 
   it("keeps data marked as loaded while a refetch fails", () => {
     const store = storeAtOctober();
-    store.dispatch(fulfilled(fetchMonthTransactions, [], october));
-    store.dispatch(fulfilled(fetchMonthBudgets, [], october));
-    store.dispatch(fulfilled(fetchCategories, [], undefined));
+    respond(store, fetchMonthTransactions, [], october);
+    respond(store, fetchMonthBudgets, [], october);
+    respond(store, fetchCategories, [], undefined);
+    store.dispatch(pending(fetchMonthTransactions, october, "x"));
     store.dispatch({
       type: fetchMonthTransactions.rejected.type,
       payload: { status: 0, code: "NETWORK_ERROR", message: "offline" },
       meta: { arg: october, requestId: "x", requestStatus: "rejected", rejectedWithValue: true, aborted: false, condition: false },
       error: {},
     });
-    expect(selectPeriodLoad(store.getState())).toMatchObject({ status: "failed", loaded: true, error: { code: "NETWORK_ERROR" } });
+    expect(periodLoad(store.getState())).toMatchObject({ status: "failed", loaded: true, error: { code: "NETWORK_ERROR" } });
   });
 });
 
@@ -197,7 +295,7 @@ describe("session and household state", () => {
     store.dispatch(firebaseUserChanged({ uid: "u", email: "a@example.com", emailVerified: true }));
     store.dispatch(fulfilled(loadMe, meWithHousehold, undefined));
     store.dispatch(fulfilled(createTransaction, makeTransaction(), {}));
-    store.dispatch(fulfilled(fetchCategories, [makeCategory()], undefined));
+    respond(store, fetchCategories, [makeCategory()], undefined);
 
     store.dispatch(sessionEnded());
     const state = store.getState();

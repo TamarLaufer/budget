@@ -10,10 +10,15 @@ import Header from "../../components/Header/Header";
 import { Button } from "../../components/ui/Button";
 import { EmptyState, ErrorBanner, ErrorView, LoadingView } from "../../components/ui/Feedback";
 import { ScrollScreen } from "../../components/ui/Layout";
-import { usePeriodData } from "../../hooks/usePeriodData";
+import { useScreenData } from "../../hooks/useScreenData";
 import { useSelectedCategory } from "../../hooks/useSelectedCategory";
 import { useAppDispatch, useAppSelector } from "../../store";
-import { selectCanManage, selectDashboard } from "../../store/selectors";
+import {
+  selectCanManage,
+  selectDashboard,
+  selectSnapshotCategoriesInDisplayOrder,
+  type Dataset,
+} from "../../store/selectors";
 import { periodShifted } from "../../store/slices/periodSlice";
 import { strings } from "../../strings/he";
 import { colors } from "../../theme";
@@ -26,12 +31,17 @@ import {
   ShowAllPress,
   ShowAllText,
 } from "./MonthlySnapshotScreen.styles";
+import { formatCurrency } from "@/functions/assets";
+
+/** What this screen shows; loaded when missing, stale or past the freshness limit. */
+const DATASETS: readonly Dataset[] = ["transactions", "budgets", "categories"];
 
 /** Monthly dashboard: every number is derived from the month's real transactions and budgets. */
 const MonthlySnapshotScreen = () => {
   const dispatch = useAppDispatch();
-  const { period, load, refresh, refreshing } = usePeriodData();
+  const { period, load, refresh, refreshing } = useScreenData(DATASETS);
   const dashboard = useAppSelector(selectDashboard);
+  const categories = useAppSelector(selectSnapshotCategoriesInDisplayOrder);
   const canManage = useAppSelector(selectCanManage);
   const { snapshot } = dashboard;
 
@@ -43,7 +53,7 @@ const MonthlySnapshotScreen = () => {
   }
   if (!load.loaded) return <LoadingView />;
 
-  const selectedCategory = snapshot.categories.find((c) => c.id === selectedCategoryId);
+  const selectedCategory = categories.find((c) => c.id === selectedCategoryId);
 
   const toggleCategories = () => {
     if (!showOverBudgetOnly && selectedCategory && !selectedCategory.isOver) {
@@ -53,8 +63,8 @@ const MonthlySnapshotScreen = () => {
   };
 
   const categoriesToDisplay = showOverBudgetOnly
-    ? snapshot.categories.filter((category) => category.isOver)
-    : snapshot.categories;
+    ? categories.filter((category) => category.isOver)
+    : categories;
 
   const selectCategory = (categoryId: string) => {
     if (selectedCategoryId === categoryId) clearSelectedId();
@@ -78,7 +88,9 @@ const MonthlySnapshotScreen = () => {
         <IncomeLabel>{strings.INCOME}</IncomeLabel>
         <IncomeValue $color={colors.success}>{formatAgorot(dashboard.totalIncome)}</IncomeValue>
         <IncomeLabel>{strings.NET}</IncomeLabel>
-        <IncomeValue $color={dashboard.net < 0 ? colors.danger : colors.success}>{formatAgorot(dashboard.net)}</IncomeValue>
+        <IncomeValue $color={dashboard.net < 0 ? colors.danger : colors.success}>
+            {formatCurrency(dashboard.net)}
+        </IncomeValue>
       </IncomeRow>
 
       <Button label={strings.ADD_TRANSACTION} onPress={() => router.push("/transaction/new")} testID="add-transaction" />
@@ -87,7 +99,7 @@ const MonthlySnapshotScreen = () => {
         <SectionTitle accessibilityRole="header">{strings.CATEGORIES}</SectionTitle>
       </SectionTitleContainer>
 
-      {snapshot.categories.length === 0 ? (
+      {categories.length === 0 ? (
         <EmptyState title={strings.NO_CATEGORIES} hint={strings.NO_CATEGORIES_HINT} />
       ) : (
         <>

@@ -1,6 +1,4 @@
 import { useMemo, useState } from "react";
-import { styled } from "styled-components/native";
-
 import type { CategoryDto, CreateTransactionRequest, PaymentMethodDto, TransactionType } from "../../../shared/api";
 import {
   validateTransactionForm,
@@ -9,28 +7,13 @@ import {
   type TransactionFormValues,
 } from "../../budget/transactionForm";
 import { strings } from "../../strings/he";
-import { colors, fontSize, spacing } from "../../theme";
 import { DateField } from "../DateField/DateField";
 import { Button } from "../ui/Button";
 import { ChipGroup, type ChipOption } from "../ui/ChipGroup";
 import { ErrorBanner } from "../ui/Feedback";
 import { Card } from "../ui/Layout";
 import { TextField } from "../ui/TextField";
-
-const FieldLabel = styled.Text`
-  font-size: ${fontSize.caption}px;
-  font-weight: 600;
-  color: ${colors.textMuted};
-`;
-
-const FieldError = styled.Text`
-  font-size: ${fontSize.caption}px;
-  color: ${colors.danger};
-`;
-
-const Field = styled.View`
-  gap: ${spacing.xs}px;
-`;
+import { Field, FieldError, FieldLabel } from "./TransactionForm.styles";
 
 const NONE = "__none__";
 

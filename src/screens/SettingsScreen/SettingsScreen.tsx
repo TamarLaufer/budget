@@ -1,20 +1,25 @@
+import * as Linking from "expo-linking";
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Alert } from "react-native";
+import { Alert, Switch } from "react-native";
 
 import type { InvitableRole, MemberDto } from "../../../shared/api";
 import { errorMessage, messageFromUnknown } from "../../api/errorMessage";
+import { isBiometricPlatform } from "../../appLock/biometrics";
 import { signOut } from "../../auth/session";
 import { Button } from "../../components/ui/Button";
 import { ChipGroup } from "../../components/ui/ChipGroup";
 import { ErrorBanner, InfoBanner } from "../../components/ui/Feedback";
 import { BodyText, Card, MutedText, Row, ScrollScreen, SectionTitle, SpaceBetweenRow, Title } from "../../components/ui/Layout";
 import { TextField } from "../../components/ui/TextField";
+import { useScreenData } from "../../hooks/useScreenData";
+import { isPushSupported, registerDevice, requestPermission } from "../../notifications/pushNotifications";
+import { useNotificationPermission } from "../../notifications/useNotificationPermission";
 import { useAppDispatch, useAppSelector } from "../../store";
-import { paymentMethodSelectors, selectCanManage } from "../../store/selectors";
+import { paymentMethodSelectors, selectCanManage, type Dataset } from "../../store/selectors";
 import { householdChanged } from "../../store/shared";
-import { updateDisplayName } from "../../store/slices/authSlice";
-import { createPaymentMethod, fetchPaymentMethods, updatePaymentMethod } from "../../store/slices/catalogSlices";
+import { updateBudgetAlerts, updateDisplayName } from "../../store/slices/authSlice";
+import { createPaymentMethod, updatePaymentMethod } from "../../store/slices/catalogSlices";
 import {
   fetchInvitations,
   fetchMembers,
@@ -27,6 +32,8 @@ import {
 } from "../../store/slices/householdSlice";
 import { format } from "../../strings/format";
 import { strings } from "../../strings/he";
+import { colors } from "../../theme";
+import { BiometricUnlockSection } from "./BiometricUnlockSection";
 
 /** Runs an async action and exposes busy/error state for the button that triggered it. */
 function useAction() {
@@ -61,6 +68,8 @@ export default function SettingsScreen() {
     <ScrollScreen withTopInset>
       <Title>{strings.TAB_SETTINGS}</Title>
       <ProfileSection />
+      {isPushSupported ? <BudgetAlertsSection /> : null}
+      {isBiometricPlatform ? <BiometricUnlockSection /> : null}
       <HouseholdSection canManage={canManage} />
       <MembersSection />
       {canManage ? <InvitationsSection /> : null}
@@ -90,6 +99,88 @@ function ProfileSection() {
         disabled={name.trim() === (user?.displayName ?? "")}
         onPress={() => void run(() => dispatch(updateDisplayName(name.trim() || null)).unwrap())}
       />
+    </Card>
+  );
+}
+
+/**
+ * Opt-in for budget threshold notifications. The server stores and enforces the preference, so
+ * turning it off stops alerts even while the app is closed.
+ */
+export function BudgetAlertsSection() {
+  const dispatch = useAppDispatch();
+  const enabled = useAppSelector((s) => s.auth.me?.notifications.budgetAlertsEnabled ?? false);
+  const userId = useAppSelector((s) => s.auth.me?.user.id ?? null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const { busy, error, run } = useAction();
+  const { permission, recheck } = useNotificationPermission();
+  // The saved preference is per account; permission is per install (lost on reinstall).
+  const needsPermission = enabled && permission !== null && !permission.granted;
+
+  /** Asks for permission and registers this install. False (with a notice) when it can't. */
+  const grantAndRegister = async (): Promise<boolean> => {
+    const granted = await requestPermission();
+    await recheck();
+    if (!granted) {
+      setNotice(strings.BUDGET_ALERTS_PERMISSION_DENIED);
+      return false;
+    }
+    try {
+      if (!userId) throw new Error("No profile");
+      await registerDevice(userId);
+    } catch {
+      setNotice(strings.BUDGET_ALERTS_UNAVAILABLE);
+      return false;
+    }
+    return true;
+  };
+
+  const toggle = (value: boolean) =>
+    void run(async () => {
+      setNotice(null);
+      if (value && !(await grantAndRegister())) return;
+      await dispatch(updateBudgetAlerts(value)).unwrap();
+    });
+
+  // When the system no longer shows the prompt, only its settings can grant permission; the
+  // foreground recheck then picks up the change and the root hook registers the device.
+  const enablePermission = () =>
+    void run(async () => {
+      setNotice(null);
+      if (permission?.canAskAgain) await grantAndRegister();
+      else await Linking.openSettings();
+    });
+
+  return (
+    <Card>
+      <SpaceBetweenRow>
+        <SectionTitle>{strings.BUDGET_ALERTS}</SectionTitle>
+        <Switch
+          value={enabled}
+          onValueChange={toggle}
+          disabled={busy}
+          trackColor={{ false: colors.track, true: colors.primary }}
+          thumbColor={colors.surface}
+          accessibilityLabel={strings.BUDGET_ALERTS}
+          testID="budget-alerts-switch"
+        />
+      </SpaceBetweenRow>
+      <MutedText>{strings.BUDGET_ALERTS_HINT}</MutedText>
+      {needsPermission ? (
+        <>
+          <InfoBanner message={strings.BUDGET_ALERTS_NEEDS_PERMISSION} />
+          <Button
+            label={strings.ENABLE_NOTIFICATIONS}
+            variant="secondary"
+            compact
+            onPress={enablePermission}
+            disabled={busy}
+            testID="budget-alerts-enable-permission"
+          />
+        </>
+      ) : null}
+      <InfoBanner message={notice} />
+      <ErrorBanner message={error} />
     </Card>
   );
 }
@@ -203,7 +294,7 @@ function MemberItem({ member, isMe, myRole }: { member: MemberDto; isMe: boolean
 
 function InvitationsSection() {
   const dispatch = useAppDispatch();
-  const { invitations, invitationsLoad } = useAppSelector((s) => s.household);
+  const { invitations, invitationsLoad } = useAppSelector((state) => state.household);
   const isOwner = useAppSelector((s) => s.auth.me?.membership?.role === "OWNER");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<InvitableRole>("MEMBER");
@@ -262,15 +353,14 @@ function InvitationsSection() {
   );
 }
 
+const PAYMENT_METHODS: readonly Dataset[] = ["paymentMethods"];
+
 function PaymentMethodsSection({ canManage }: { canManage: boolean }) {
   const dispatch = useAppDispatch();
   const methods = useAppSelector(paymentMethodSelectors.selectAll);
   const [name, setName] = useState("");
   const { busy, error, run } = useAction();
-
-  useEffect(() => {
-    void dispatch(fetchPaymentMethods());
-  }, [dispatch]);
+  useScreenData(PAYMENT_METHODS);
 
   return (
     <Card>

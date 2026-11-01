@@ -1,10 +1,11 @@
 import { formatAgorot } from "../../budget/money";
 import type { BudgetUsage } from "../../budget/types";
 import { colors } from "../../theme";
-import { Caption, Card, Item, ItemLabel, ItemValue, Row } from "./BudgetSummary.styles";
+import { Caption, Card, Row } from "./BudgetSummary.styles";
 import { ProgressBar } from "../ProgressBar/ProgressBar";
 import { format } from "../../strings/format";
 import { strings } from "../../strings/he";
+import SummaryItem from "./BudgetSummaryItem";
 
 interface BudgetSummaryProps {
   totals: BudgetUsage;
@@ -28,22 +29,5 @@ export function BudgetSummary({ totals }: BudgetSummaryProps) {
       <ProgressBar fill={totals.fill} percentUsed={totals.percentUsed} isOver={totals.isOver} />
       <Caption>{format(strings.BUDGET_USED, { percent: totals.percentUsed })}</Caption>
     </Card>
-  );
-}
-
-interface SummaryItemProps {
-  label: string;
-  value: string;
-  color?: string;
-}
-
-function SummaryItem({ label, value, color = colors.text }: SummaryItemProps) {
-  return (
-    <Item>
-      <ItemLabel>{label}</ItemLabel>
-      <ItemValue $color={color} adjustsFontSizeToFit numberOfLines={1}>
-        {value}
-      </ItemValue>
-    </Item>
   );
 }

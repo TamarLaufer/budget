@@ -76,7 +76,7 @@ const householdSlice = createSlice({
       })
       .addCase(fetchMembers.fulfilled, (state, action) => {
         state.members = action.payload;
-        state.membersLoad = loadSucceeded;
+        state.membersLoad = loadSucceeded();
       })
       .addCase(fetchMembers.rejected, (state, action) => {
         state.membersLoad = loadFailed(state.membersLoad, action.payload);
@@ -93,7 +93,7 @@ const householdSlice = createSlice({
       })
       .addCase(fetchInvitations.fulfilled, (state, action) => {
         state.invitations = action.payload;
-        state.invitationsLoad = loadSucceeded;
+        state.invitationsLoad = loadSucceeded();
       })
       .addCase(fetchInvitations.rejected, (state, action) => {
         state.invitationsLoad = loadFailed(state.invitationsLoad, action.payload);
@@ -111,7 +111,7 @@ const householdSlice = createSlice({
       })
       .addCase(fetchReceivedInvitations.fulfilled, (state, action) => {
         state.received = action.payload;
-        state.receivedLoad = loadSucceeded;
+        state.receivedLoad = loadSucceeded();
       })
       .addCase(fetchReceivedInvitations.rejected, (state, action) => {
         state.receivedLoad = loadFailed(state.receivedLoad, action.payload);

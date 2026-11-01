@@ -71,3 +71,17 @@ export function update(transactionId: string, data: TransactionData, db: Db = ge
 export function remove(transactionId: string, db: Db = getPrisma()) {
   return db.transaction.delete({ where: { id: transactionId } });
 }
+
+/** Total expenses of one category within a date range, in agorot. Income never counts. */
+export async function sumExpenses(
+  householdId: string,
+  categoryId: string,
+  dateRange: { gte: Date; lt: Date },
+  db: Db = getPrisma(),
+): Promise<number> {
+  const result = await db.transaction.aggregate({
+    where: { householdId, categoryId, type: "EXPENSE", transactionDate: dateRange },
+    _sum: { amountAgorot: true },
+  });
+  return result._sum.amountAgorot ?? 0;
+}

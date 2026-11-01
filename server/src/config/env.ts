@@ -21,6 +21,9 @@ const envSchema = z.object({
   /** Reject tokens of users whose sessions were revoked/disabled. Costs one Firebase call per request. */
   FIREBASE_CHECK_REVOKED: booleanFromString.default(true),
 
+  /** Expo access token; needed only if "enhanced push security" is enabled for the EAS project. */
+  EXPO_ACCESS_TOKEN: z.string().min(1).optional(),
+
   /** Comma-separated browser origins allowed by CORS. The mobile app does not need CORS. */
   CORS_ORIGINS: z.string().default(""),
   /** Number of reverse-proxy hops to trust for the client IP (rate limiting). 0 = none. */
@@ -41,6 +44,7 @@ export interface AppConfig {
     serviceAccountBase64: string | undefined;
     checkRevoked: boolean;
   };
+  push: { expoAccessToken: string | undefined };
   corsOrigins: string[];
   trustProxy: number;
   rateLimit: { windowMs: number; max: number };
@@ -69,6 +73,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
       serviceAccountBase64: e.FIREBASE_SERVICE_ACCOUNT_BASE64,
       checkRevoked: e.FIREBASE_CHECK_REVOKED,
     },
+    push: { expoAccessToken: e.EXPO_ACCESS_TOKEN },
     corsOrigins: e.CORS_ORIGINS.split(",")
       .map((origin) => origin.trim())
       .filter(Boolean),

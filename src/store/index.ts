@@ -2,6 +2,7 @@ import { combineReducers, configureStore, type UnknownAction } from "@reduxjs/to
 import { useDispatch, useSelector } from "react-redux";
 
 import { sessionEnded } from "./shared";
+import appLockReducer from "./slices/appLockSlice";
 import authReducer from "./slices/authSlice";
 import budgetsReducer from "./slices/budgetsSlice";
 import { categoriesReducer, paymentMethodsReducer } from "./slices/catalogSlices";
@@ -11,6 +12,7 @@ import transactionsReducer from "./slices/transactionsSlice";
 
 const appReducer = combineReducers({
   auth: authReducer,
+  appLock: appLockReducer,
   household: householdReducer,
   transactions: transactionsReducer,
   categories: categoriesReducer,

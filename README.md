@@ -108,6 +108,31 @@ budgets and totals. Every transaction records who created it.
   that (verified) email. No email is sent by the backend in this MVP — tell your partner to sign up.
 - **Offline**: no offline sync. Requests fail with a clear message, and the add/edit form keeps every
   value after a failed save so nothing typed is lost.
+- **Budget alerts** (Settings → התראות תקציב, off by default): when an expense dated in the current
+  month (Israel time) brings a category to 80% or 100% of that month's budget, every household
+  member who opted in gets a push notification. Each threshold is sent at most once per household,
+  category and month (a `BudgetAlert` row with a unique key; safe under concurrent saves). There is
+  no re-arming within a month: if an edit or delete lowers usage, that threshold does not fire again.
+  Jumping past 100% sends only the 100% alert. Budget edits never alert. Recipients are resolved
+  from current membership at send time, so former members get nothing. Alert work runs after the
+  save, never fails it, and adds at most 3 s to the request (slower work finishes in the background).
+
+## Push notifications (budget alerts) — one-time setup
+
+Push needs a development build or APK (not Expo Go) and FCM credentials. Nothing secret is committed.
+
+1. **Firebase console** → the existing project → add Android apps `com.tamarlaufer.spendo` and
+   `com.tamarlaufer.spendo.dev`, then download `google-services.json` (it contains both) into the
+   repository root. It is gitignored.
+2. **EAS file variable** (for cloud builds), per environment you build:
+   `npx eas-cli@latest env:set --name GOOGLE_SERVICES_JSON --type file --value ./google-services.json --environment preview --environment development --visibility secret`
+   For local builds add `GOOGLE_SERVICES_JSON=./google-services.json` to `.env`.
+3. **FCM V1 key**: Firebase console → Project settings → Service accounts → generate a private key,
+   then `npx eas-cli@latest credentials` → Android → *Google Service Account* → *FCM V1* → upload it.
+   Keep the JSON outside the repository.
+4. **Server**: apply the migration with `npm --prefix server run db:migrate:deploy`. Optional:
+   enable *Enhanced push security* in the EAS dashboard and set `EXPO_ACCESS_TOKEN` on the server.
+5. Build a new APK: the `expo-notifications` plugin and `google-services.json` are build-time.
 
 ## Local development
 

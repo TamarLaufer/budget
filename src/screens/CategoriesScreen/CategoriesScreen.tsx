@@ -6,14 +6,17 @@ import { Button } from "../../components/ui/Button";
 import { EmptyState, ErrorBanner, ErrorView, InfoBanner, LoadingView } from "../../components/ui/Feedback";
 import { BodyText, Card, Row, ScrollScreen, SectionTitle, SpaceBetweenRow, Title } from "../../components/ui/Layout";
 import { TextField } from "../../components/ui/TextField";
-import { usePeriodData } from "../../hooks/usePeriodData";
+import { useScreenData } from "../../hooks/useScreenData";
 import { useAppDispatch, useAppSelector } from "../../store";
-import { categorySelectors, selectCanManage } from "../../store/selectors";
+import { categorySelectors, selectCanManage, type Dataset } from "../../store/selectors";
 import { createCategory, updateCategory } from "../../store/slices/catalogSlices";
 import { strings } from "../../strings/he";
 
+/** What this screen shows; loaded when missing, stale or past the freshness limit. */
+const DATASETS: readonly Dataset[] = ["categories"];
+
 export default function CategoriesScreen() {
-  const { load, refresh, refreshing } = usePeriodData();
+  const { load, refresh, refreshing } = useScreenData(DATASETS);
   const categories = useAppSelector(categorySelectors.selectAll);
   const canManage = useAppSelector(selectCanManage);
 

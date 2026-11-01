@@ -33,20 +33,57 @@ enum TransactionType {
 }
 
 model User {
-  id          String   @id @default(uuid()) @db.Uuid
-  firebaseUid String   @unique
+  id                  String   @id @default(uuid()) @db.Uuid
+  firebaseUid         String   @unique
   /// Normalized (trimmed, lower-case) email from the verified Firebase token.
-  email       String
-  displayName String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  email               String
+  displayName         String?
+  /// Opt-in: budget threshold push notifications. Enforced server-side when sending.
+  budgetAlertsEnabled Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   membership          HouseholdMember?
   householdsCreated   Household[]      @relation("HouseholdCreator")
   invitationsSent     Invitation[]     @relation("InvitationSender")
   transactionsCreated Transaction[]
+  pushDevices         PushDevice[]
 
   @@index([email])
+}
+
+/// A device that can receive push notifications. A user may have several.
+model PushDevice {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @db.Uuid
+  /// Expo push token ("ExponentPushToken[...]"). Unique: a token belongs to the last user who registered it.
+  expoPushToken String   @unique
+  platform      String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// One row per threshold already reached for a category in a month. The unique key makes
+/// "send at most once" safe under concurrent requests (INSERT ... ON CONFLICT DO NOTHING).
+model BudgetAlert {
+  id          String   @id @default(uuid()) @db.Uuid
+  householdId String   @db.Uuid
+  categoryId  String   @db.Uuid
+  year        Int
+  /// 1-12
+  month       Int
+  /// Percent of the budget: 80 or 100.
+  threshold   Int
+  createdAt   DateTime @default(now())
+
+  household Household @relation(fields: [householdId], references: [id], onDelete: Cascade)
+  category  Category  @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([householdId, categoryId, year, month, threshold])
 }
 
 model Household {
@@ -56,13 +93,14 @@ model Household {
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
-  createdBy      User            @relation("HouseholdCreator", fields: [createdByUserId], references: [id])
+  createdBy      User              @relation("HouseholdCreator", fields: [createdByUserId], references: [id])
   members        HouseholdMember[]
   invitations    Invitation[]
   categories     Category[]
   budgets        MonthlyBudget[]
   transactions   Transaction[]
   paymentMethods PaymentMethod[]
+  budgetAlerts   BudgetAlert[]
 }
 
 model HouseholdMember {
@@ -110,6 +148,7 @@ model Category {
   subCategories SubCategory[]
   budgets       MonthlyBudget[]
   transactions  Transaction[]
+  budgetAlerts  BudgetAlert[]
 
   @@unique([householdId, name])
 }

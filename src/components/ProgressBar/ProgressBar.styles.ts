@@ -3,7 +3,7 @@ import { styled } from "styled-components/native";
 import { colors, radius } from "../../theme";
 
 export const Track = styled.View`
-  height: 10px;
+  height: 14px;
   border-radius: ${radius.pill}px;
   background-color: ${colors.track};
   overflow: hidden;

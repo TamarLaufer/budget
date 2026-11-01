@@ -2,10 +2,17 @@ import { Router, type RequestHandler } from "express";
 
 import * as authController from "../controllers/authController.js";
 import * as householdController from "../controllers/householdController.js";
-import { budgets, categories, paymentMethods, transactions } from "../controllers/resourceControllers.js";
+import * as notificationController from "../controllers/notificationController.js";
+import {
+  budgets,
+  categories,
+  createTransactionsController,
+  paymentMethods,
+} from "../controllers/resourceControllers.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { invitationRateLimit } from "../middleware/rateLimit.js";
 import { MANAGER_ROLES, requireHousehold, requireRole } from "../middleware/requireHousehold.js";
+import type { BudgetAlerts } from "../services/budgetAlertService.js";
 import type { TokenVerifier } from "../types/auth.js";
 
 /**
@@ -13,16 +20,22 @@ import type { TokenVerifier } from "../types/auth.js";
  * Household resources additionally go through `requireHousehold`, which derives the household
  * from the user's membership; role checks come from `requireRole`.
  */
-export function createApiRouter(verifier: TokenVerifier): Router {
+export function createApiRouter(verifier: TokenVerifier, budgetAlerts: BudgetAlerts): Router {
   const api = Router();
   api.use(authenticate(verifier));
 
   const manager = requireRole(...MANAGER_ROLES);
   const owner = requireRole("OWNER");
+  const transactions = createTransactionsController(budgetAlerts);
 
   // ---- Current user ----
   api.get("/auth/me", authController.getMe);
   api.patch("/auth/me", authController.updateMe);
+
+  // ---- Push notifications: per user and device, independent of household membership ----
+  api.put("/notifications/devices", notificationController.registerDevice);
+  api.delete("/notifications/devices", notificationController.unregisterDevice);
+  api.put("/notifications/preferences", notificationController.updatePreferences);
 
   // ---- Onboarding: available to users without a household ----
   api.post("/households", householdController.create);

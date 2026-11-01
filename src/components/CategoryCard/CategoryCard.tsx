@@ -35,23 +35,23 @@ export function CategoryCard({
   onPress,
   isSelected,
 }: CategoryCardProps) {
-  const { name, budget, spent, remaining, percentUsed, fill, isOver } =
+  const { name, budget, spent, remaining, percentUsed, fill, isOver, hasBudget } =
     category;
 
   const scale = useDerivedValue(() =>
-    withTiming(isSelected ? 1.04 : 1, {
+    withTiming(isSelected ? 1.015 : 1, {
       duration: 230,
     }),
   );
 
   const elevation = useDerivedValue(() => {
-    return withTiming(isSelected ? 8 : 0, {
+    return withTiming(isSelected ? 3 : 0, {
       duration: 230,
     });
   });
 
   const position = useDerivedValue(() => {
-    return withTiming(isSelected ? 8 : 0, {
+    return withTiming(isSelected ? 2 : 0, {
       duration: 230,
     });
   });
@@ -84,25 +84,30 @@ export function CategoryCard({
 
       <DetailRow>
         <DetailLabel>{strings.BUDGET}</DetailLabel>
-        <DetailValue>{formatAgorot(budget)}</DetailValue>
+        <DetailValue>{hasBudget ? formatAgorot(budget) : strings.NO_BUDGET_SET}</DetailValue>
       </DetailRow>
       <DetailRow>
         <DetailLabel>{strings.EXPENSES}</DetailLabel>
         <DetailValue>{formatAgorot(spent)}</DetailValue>
       </DetailRow>
 
-      <ProgressBar fill={fill} percentUsed={percentUsed} isOver={isOver} />
+      {/* Without a budget there is no usage to show. */}
+      {hasBudget ? (
+        <>
+          <ProgressBar fill={fill} percentUsed={percentUsed} isOver={isOver} />
 
-      <DetailRow>
-        <Status $isOver={isOver}>
-          {isOver
-            ? format(strings.OVER_BY, { amount: formatAgorot(-remaining) })
-            : format(strings.REMAINING, { amount: formatAgorot(remaining) })}
-        </Status>
-        <Percent $isOver={isOver}>
-          {format(strings.PERCENT, { percent: percentUsed })}
-        </Percent>
-      </DetailRow>
+          <DetailRow>
+            <Status $isOver={isOver}>
+              {isOver
+                ? format(strings.OVER_BY, { amount: formatAgorot(-remaining) })
+                : format(strings.REMAINING, { amount: formatAgorot(remaining) })}
+            </Status>
+            <Percent $isOver={isOver}>
+              {format(strings.PERCENT, { percent: percentUsed })}
+            </Percent>
+          </DetailRow>
+        </>
+      ) : null}
     </AnimatedCard>
   );
 }

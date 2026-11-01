@@ -8,6 +8,8 @@ import { getPrisma } from "./db/prisma.js";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler.js";
 import { apiRateLimit } from "./middleware/rateLimit.js";
 import { createApiRouter } from "./routes/index.js";
+import { createBudgetAlerts } from "./services/budgetAlertService.js";
+import type { PushSender } from "./services/push/pushSender.js";
 import type { TokenVerifier } from "./types/auth.js";
 
 export interface AppDependencies {
@@ -15,11 +17,16 @@ export interface AppDependencies {
   logger: Logger;
   /** Firebase in production; a fake in tests. */
   tokenVerifier: TokenVerifier;
+  /** Expo push service in production; a fake in tests. */
+  pushSender: PushSender;
+  /** Clock for "current month" decisions; injectable for tests. */
+  now?: () => Date;
 }
 
 const JSON_BODY_LIMIT = "100kb";
 
-export function createApp({ config, logger, tokenVerifier }: AppDependencies): Express {
+export function createApp({ config, logger, tokenVerifier, pushSender, now }: AppDependencies): Express {
+  const budgetAlerts = createBudgetAlerts({ pushSender, logger, now });
   const app = express();
 
   app.disable("x-powered-by");
@@ -48,7 +55,7 @@ export function createApp({ config, logger, tokenVerifier }: AppDependencies): E
     res.json({ status: "ok" });
   });
 
-  app.use("/api", apiRateLimit(config.rateLimit), createApiRouter(tokenVerifier));
+  app.use("/api", apiRateLimit(config.rateLimit), createApiRouter(tokenVerifier, budgetAlerts));
 
   app.use(notFoundHandler);
   app.use(errorHandler(logger));

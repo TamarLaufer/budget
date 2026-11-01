@@ -40,6 +40,21 @@ export interface MeDto {
   user: UserDto;
   /** null until the user creates a household or accepts an invitation. */
   membership: MembershipDto | null;
+  notifications: NotificationPreferencesDto;
+}
+
+/** The signed-in user's own notification settings (never exposed for other members). */
+export interface NotificationPreferencesDto {
+  budgetAlertsEnabled: boolean;
+}
+
+/** `data` attached to a budget alert push notification. Contains no amounts or descriptions. */
+export interface BudgetAlertPushData {
+  type: "budget-alert";
+  year: number;
+  /** 1-12 */
+  month: number;
+  categoryId: string;
 }
 
 export interface MemberDto {
@@ -117,6 +132,18 @@ export interface CreateHouseholdRequest {
 export interface UpdateMeRequest {
   displayName: string | null;
 }
+
+export interface RegisterPushDeviceRequest {
+  /** Expo push token, "ExponentPushToken[...]". */
+  token: string;
+  platform: "android" | "ios";
+}
+
+export interface UnregisterPushDeviceRequest {
+  token: string;
+}
+
+export type UpdateNotificationPreferencesRequest = NotificationPreferencesDto;
 
 export interface CreateInvitationRequest {
   email: string;

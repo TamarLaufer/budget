@@ -1,7 +1,7 @@
 import { createSelector } from "@reduxjs/toolkit";
 
 import type { Role } from "../../shared/api";
-import { buildMonthlyDashboard } from "../budget/calculations";
+import { buildMonthlyDashboard, lastExpenseActivityByCategory, orderSnapshotCategories } from "../budget/calculations";
 import { isDateInPeriod, periodKey } from "../budget/period";
 import type { RootState } from "./index";
 import { idleLoad, type LoadState } from "./shared";
@@ -44,21 +44,40 @@ export const selectDashboard = createSelector(
   buildMonthlyDashboard,
 );
 
-/** Combined load state of everything the selected month's screens need. */
-export const selectPeriodLoad = createSelector(
-  [
-    (s: RootState) => s.transactions.months[periodKey(s.period)] ?? idleLoad,
-    (s: RootState) => s.budgets.months[periodKey(s.period)] ?? idleLoad,
-    (s: RootState) => s.categories.load,
-  ],
-  (...loads: LoadState[]): LoadState => {
-    const loaded = loads.every((l) => l.loaded);
-    const failed = loads.find((l) => l.status === "failed");
-    if (failed) return { status: "failed", error: failed.error, loaded };
-    if (loads.every((l) => l.status === "succeeded")) return { status: "succeeded", error: null, loaded };
-    return { status: "loading", error: null, loaded };
-  },
+/** The dashboard's categories in Monthly Snapshot display order (a sorted copy). */
+export const selectSnapshotCategoriesInDisplayOrder = createSelector(
+  [selectDashboard, selectTransactionsForPeriod],
+  (dashboard, transactions) =>
+    orderSnapshotCategories(dashboard.snapshot.categories, lastExpenseActivityByCategory(transactions)),
 );
+
+/** The data sets screens load; transactions and budgets are per month. */
+export type Dataset = "transactions" | "budgets" | "categories" | "paymentMethods";
+
+/** Load state of one data set, for the selected month where it applies. */
+export function selectLoad(s: RootState, dataset: Dataset): LoadState {
+  switch (dataset) {
+    case "transactions":
+      return s.transactions.months[periodKey(s.period)] ?? idleLoad;
+    case "budgets":
+      return s.budgets.months[periodKey(s.period)] ?? idleLoad;
+    case "categories":
+      return s.categories.load;
+    case "paymentMethods":
+      return s.paymentMethods.load;
+  }
+}
+
+export type CombinedLoad = Pick<LoadState, "status" | "error" | "loaded">;
+
+/** Combined load state of the data sets a screen shows. */
+export function combineLoads(loads: readonly LoadState[]): CombinedLoad {
+  const loaded = loads.every((l) => l.loaded);
+  const failed = loads.find((l) => l.status === "failed");
+  if (failed) return { status: "failed", error: failed.error, loaded };
+  if (loads.every((l) => l.status === "succeeded")) return { status: "succeeded", error: null, loaded };
+  return { status: "loading", error: null, loaded };
+}
 
 export const selectMembership = (s: RootState) => s.auth.me?.membership ?? null;
 export const selectRole = (s: RootState): Role | null => s.auth.me?.membership?.role ?? null;
@@ -77,3 +96,18 @@ export const selectAppPhase = (s: RootState): AppPhase => {
   if (!me) return meStatus === "failed" ? "profileError" : "loadingProfile";
   return me.membership ? "ready" : "onboarding";
 };
+
+export type LockGate = "checking" | "locked" | "unlocked";
+
+/**
+ * Whether the signed-in user's content may be shown. Lock state recorded for any other user (or
+ * none yet) counts as "checking", so it can never apply to the wrong account.
+ */
+export const selectLockGate = (s: RootState): LockGate => {
+  const uid = s.auth.firebaseUser?.uid;
+  if (!uid || s.appLock.uid !== uid) return "checking";
+  return s.appLock.status;
+};
+
+/** Fingerprint unlock is on for the signed-in user. */
+export const selectLockEnabled = (s: RootState) => selectLockGate(s) !== "checking" && s.appLock.enabled;
