@@ -21,6 +21,8 @@ import type {
   UpdatePaymentMethodRequest,
   UpdateTransactionRequest,
   UpsertBudgetRequest,
+  CreateSubCategoryRequest,
+  SubCategoryDto,
 } from "../../shared/api";
 import type { Period } from "../budget/period";
 import { apiRequest } from "./client";
@@ -58,6 +60,15 @@ export const api = {
     list: () => apiRequest<CategoryDto[]>("GET", "/categories", { query: { includeInactive: true } }),
     create: (body: CreateCategoryRequest) => apiRequest<CategoryDto>("POST", "/categories", { body }),
     update: (id: string, body: UpdateCategoryRequest) => apiRequest<CategoryDto>("PATCH", `/categories/${id}`, { body }),
+  },
+
+  subCategories: {
+  list: (categoryId: string) =>
+    apiRequest<SubCategoryDto[]>("GET", "/subcategories", {
+      query: { categoryId },
+    }),
+  create: (body: CreateSubCategoryRequest) =>
+    apiRequest<SubCategoryDto>("POST", "/subcategories", { body }),
   },
 
   paymentMethods: {

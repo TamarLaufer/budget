@@ -46,6 +46,7 @@ export interface TransactionData {
   type: TransactionType;
   amountAgorot: number;
   categoryId: string | null;
+  subCategoryId: string | null;
   description: string | null;
   transactionDate: Date;
   paymentMethodId: string | null;

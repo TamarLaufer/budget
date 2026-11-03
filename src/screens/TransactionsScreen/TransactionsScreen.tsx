@@ -10,7 +10,7 @@ import { filterTransactions, noFilters, type TransactionFilters } from "../../bu
 import { periodToDate } from "../../budget/period";
 import Header from "../../components/Header/Header";
 import { Button } from "../../components/ui/Button";
-import { ChipGroup, type ChipOption } from "../../components/ui/ChipGroup";
+import { ChipGroup, type ChipOption } from "../../components/ui/ChipGroup/ChipGroup";
 import { EmptyState, ErrorBanner, ErrorView, LoadingView } from "../../components/ui/Feedback";
 import { TextField } from "../../components/ui/TextField";
 import { TransactionRow } from "../../components/TransactionRow/TransactionRow";
@@ -101,11 +101,13 @@ export default function TransactionsScreen() {
         options={typeOptions}
         selected={filters.type ?? ALL}
         onSelect={(v) => setFilters((f) => ({ ...f, type: v === ALL ? null : (v as TransactionType) }))}
+        text={strings.TRANSACTION_TYPE}
       />
       <ChipGroup
         options={categoryOptions}
         selected={filters.categoryId ?? ALL}
         onSelect={(v) => setFilters((f) => ({ ...f, categoryId: v === ALL ? null : v }))}
+        text={strings.CATEGORY}
       />
     </Filters>
   );

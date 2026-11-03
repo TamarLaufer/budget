@@ -16,6 +16,8 @@ import {
   updateNamedSchema,
   updateTransactionSchema,
   upsertBudgetSchema,
+  createSubCategorySchema,
+  subCategoryListQuerySchema,
 } from "../validators/resourceValidators.js";
 
 export const categories = {
@@ -33,6 +35,29 @@ export const categories = {
     const { id } = idParamsSchema.parse(req.params);
     const body = updateNamedSchema.parse(req.body);
     res.json(await catalogService.updateCategory(getHousehold(req), id, body));
+  }) satisfies RequestHandler,
+};
+
+export const subCategories = {
+  list: (async (req, res) => {
+    const query = subCategoryListQuerySchema.parse(req.query);
+    res.json(
+      await catalogService.listSubCategories(
+        getHousehold(req),
+        query.categoryId,
+      ),
+    );
+  }) satisfies RequestHandler,
+
+  create: (async (req, res) => {
+    const body = createSubCategorySchema.parse(req.body);
+    res.status(201).json(
+      await catalogService.createSubCategory(
+        getHousehold(req),
+        body.categoryId,
+        body.name,
+      ),
+    );
   }) satisfies RequestHandler,
 };
 

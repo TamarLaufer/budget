@@ -8,6 +8,7 @@ import {
   categories,
   createTransactionsController,
   paymentMethods,
+  subCategories,
 } from "../controllers/resourceControllers.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { invitationRateLimit } from "../middleware/rateLimit.js";
@@ -70,6 +71,9 @@ export function createApiRouter(verifier: TokenVerifier, budgetAlerts: BudgetAle
   household.get("/categories", categories.list);
   household.post("/categories", manager, categories.create);
   household.patch("/categories/:id", manager, categories.update);
+
+  household.get("/subcategories", subCategories.list);
+  household.post("/subcategories", manager, subCategories.create);
 
   household.get("/payment-methods", paymentMethods.list);
   household.post("/payment-methods", manager, paymentMethods.create);

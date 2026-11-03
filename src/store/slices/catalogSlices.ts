@@ -1,7 +1,8 @@
 /** Categories and payment methods: small household-wide lists, loaded once and kept in sync. */
 import { createEntityAdapter, createSlice } from "@reduxjs/toolkit";
 
-import type { CategoryDto, PaymentMethodDto, UpdateCategoryRequest, UpdatePaymentMethodRequest } from "../../../shared/api";
+import type { CategoryDto, PaymentMethodDto, UpdateCategoryRequest, UpdatePaymentMethodRequest, CreateSubCategoryRequest,
+SubCategoryDto, } from "../../../shared/api";
 import { api } from "../../api/endpoints";
 import {
   acceptResponse,
@@ -131,5 +132,78 @@ const paymentMethodsSlice = createSlice({
   },
 });
 
+export const subCategoriesAdapter = createEntityAdapter<SubCategoryDto>({
+  sortComparer: (a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
+});
+
+export const fetchSubCategories = apiThunk(
+  "subCategories/fetch",
+  (categoryId: string) => api.subCategories.list(categoryId),
+);
+
+export const createSubCategory = apiThunk(
+  "subCategories/create",
+  (body: CreateSubCategoryRequest) => api.subCategories.create(body),
+);
+
+const subCategoriesInitial = subCategoriesAdapter.getInitialState<{
+  loadByCategory: Record<string, LoadState | undefined>;
+  fetchRequests: Record<string, string | undefined>;
+  createRequests: Record<string, boolean | undefined>;
+}>({
+  loadByCategory: {},
+  fetchRequests: {},
+  createRequests: {},
+});
+
+const subCategoriesSlice = createSlice({
+  name: "subCategories",
+  initialState: subCategoriesInitial,
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(householdChanged, () => subCategoriesInitial)
+      .addCase(fetchSubCategories.pending, (state, action) => {
+        const categoryId = action.meta.arg;
+        state.fetchRequests[categoryId] = action.meta.requestId;
+        state.loadByCategory[categoryId] = loadPending(
+          state.loadByCategory[categoryId] ?? idleLoad,
+        );
+      })
+      .addCase(fetchSubCategories.fulfilled, (state, action) => {
+        const categoryId = action.meta.arg;
+        if (state.fetchRequests[categoryId] !== action.meta.requestId) return;
+
+        subCategoriesAdapter.upsertMany(state, action.payload);
+        state.loadByCategory[categoryId] = loadSucceeded;
+        delete state.fetchRequests[categoryId];
+      })
+      .addCase(fetchSubCategories.rejected, (state, action) => {
+        const categoryId = action.meta.arg;
+        if (state.fetchRequests[categoryId] !== action.meta.requestId) return;
+
+        state.loadByCategory[categoryId] = loadFailed(
+          state.loadByCategory[categoryId] ?? idleLoad,
+          action.payload,
+        );
+        delete state.fetchRequests[categoryId];
+      })
+      .addCase(createSubCategory.pending, (state, action) => {
+        state.createRequests[action.meta.requestId] = true;
+      })
+      .addCase(createSubCategory.fulfilled, (state, action) => {
+        if (!state.createRequests[action.meta.requestId]) return;
+
+        subCategoriesAdapter.upsertOne(state, action.payload);
+        delete state.createRequests[action.meta.requestId];
+      })
+      .addCase(createSubCategory.rejected, (state, action) => {
+        delete state.createRequests[action.meta.requestId];
+      });
+  },
+});
+
+
 export const categoriesReducer = categoriesSlice.reducer;
 export const paymentMethodsReducer = paymentMethodsSlice.reducer;
+export const subCategoriesReducer = subCategoriesSlice.reducer;

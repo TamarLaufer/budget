@@ -133,7 +133,8 @@ export const strings = {
     TOO_LONG: "הטקסט ארוך מדי",
     DATE_INVALID: "תאריך לא תקין",
   },
-
+  TRANSACTION_TYPE: "סוג תנועה:",
+  
   // ---- Categories & budgets ----
   NEW_CATEGORY: "קטגוריה חדשה",
   CATEGORY_NAME: "שם הקטגוריה",

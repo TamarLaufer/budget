@@ -2,13 +2,14 @@
  * Categories and payment methods: shared, named, household-level lists that are deactivated
  * rather than deleted, so historical transactions keep pointing at them.
  */
-import type { CategoryDto, PaymentMethodDto } from "../../../shared/api.js";
+import type { CategoryDto, PaymentMethodDto, SubCategoryDto } from "../../../shared/api.js";
 import * as categoriesRepository from "../repositories/categoriesRepository.js";
 import * as paymentMethodsRepository from "../repositories/paymentMethodsRepository.js";
 import type { HouseholdContext } from "../types/auth.js";
-import { conflict, notFound } from "../utils/errors.js";
-import { toCategoryDto, toPaymentMethodDto } from "../utils/serializers.js";
+import { badRequest, conflict, notFound } from "../utils/errors.js";
+import { toCategoryDto, toPaymentMethodDto, toSubCategoryDto } from "../utils/serializers.js";
 import { isUniqueViolation } from "./householdService.js";
+import * as subCategoriesRepository from "../repositories/subCategoriesRepository.js";
 
 async function rethrowNameTaken<T>(code: string, work: Promise<T>): Promise<T> {
   try {
@@ -63,6 +64,48 @@ export async function createPaymentMethod(ctx: HouseholdContext, name: string): 
   );
   return toPaymentMethodDto(method);
 }
+
+export async function listSubCategories(
+  ctx: HouseholdContext,
+  categoryId: string,
+): Promise<SubCategoryDto[]> {
+  const category = await categoriesRepository.findInHousehold(
+    ctx.householdId,
+    categoryId,
+  );
+  if (!category) throw notFound("CATEGORY_NOT_FOUND", "Category was not found");
+
+  const subCategories = await subCategoriesRepository.list(
+    ctx.householdId,
+    categoryId,
+  );
+  return subCategories.map(toSubCategoryDto);
+}
+
+export async function createSubCategory(
+  ctx: HouseholdContext,
+  categoryId: string,
+  name: string,
+): Promise<SubCategoryDto> {
+  const category = await categoriesRepository.findInHousehold(
+    ctx.householdId,
+    categoryId,
+  );
+  if (!category) throw notFound("CATEGORY_NOT_FOUND", "Category was not found");
+  if (!category.isActive) {
+    throw badRequest("CATEGORY_INACTIVE", "Category is inactive");
+  }
+
+  const subCategory = await rethrowNameTaken(
+    "SUBCATEGORY_NAME_TAKEN",
+    subCategoriesRepository.create(ctx.householdId, categoryId, name),
+  );
+  return toSubCategoryDto(subCategory);
+}
+
+
+// ---- Subcategories ----
+
 
 export async function updatePaymentMethod(
   ctx: HouseholdContext,

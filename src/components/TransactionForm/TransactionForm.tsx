@@ -9,7 +9,7 @@ import {
 import { strings } from "../../strings/he";
 import { DateField } from "../DateField/DateField";
 import { Button } from "../ui/Button";
-import { ChipGroup, type ChipOption } from "../ui/ChipGroup";
+import { ChipGroup, type ChipOption } from "../ui/ChipGroup/ChipGroup";
 import { ErrorBanner } from "../ui/Feedback";
 import { Card } from "../ui/Layout";
 import { TextField } from "../ui/TextField";

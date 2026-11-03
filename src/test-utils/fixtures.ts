@@ -11,6 +11,7 @@ export function makeTransaction(overrides: Partial<TransactionDto> = {}): Transa
     type: "EXPENSE",
     amountAgorot: 1000,
     categoryId: "food",
+    subCategoryId: null,
     description: null,
     transactionDate: "2026-10-10",
     paymentMethodId: null,

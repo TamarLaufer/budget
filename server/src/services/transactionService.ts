@@ -9,6 +9,7 @@ import { badRequest, forbidden, notFound } from "../utils/errors.js";
 import { toTransactionDto } from "../utils/serializers.js";
 import type { CreateTransactionInput, UpdateTransactionInput } from "../validators/resourceValidators.js";
 import { MANAGER_ROLES } from "../middleware/requireHousehold.js";
+import * as subCategoriesRepository from "../repositories/subCategoriesRepository.js";
 
 const transactionNotFound = () => notFound("TRANSACTION_NOT_FOUND", "Transaction was not found");
 
@@ -58,6 +59,27 @@ async function validateReferences(
     }
   }
 
+  if (data.subCategoryId) {
+  const subCategory = await subCategoriesRepository.findInHousehold(
+    ctx.householdId,
+    data.subCategoryId,
+  );
+
+  if (!subCategory) {
+    throw badRequest(
+      "INVALID_SUBCATEGORY",
+      "Subcategory does not exist in this household",
+    );
+  }
+
+  if (subCategory.categoryId !== data.categoryId) {
+    throw badRequest(
+      "SUBCATEGORY_CATEGORY_MISMATCH",
+      "Subcategory does not belong to the selected category",
+    );
+  }
+}
+
   if (data.paymentMethodId) {
     const method = await paymentMethodsRepository.findInHousehold(ctx.householdId, data.paymentMethodId);
     if (!method) {
@@ -78,6 +100,7 @@ export async function create(
     type: input.type,
     amountAgorot: input.amountAgorot,
     categoryId: input.categoryId ?? null,
+    subCategoryId: input.subCategoryId ?? null,
     description: input.description ?? null,
     transactionDate: dateOnlyToDate(input.transactionDate),
     paymentMethodId: input.paymentMethodId ?? null,
@@ -105,10 +128,12 @@ export async function update(
   assertCanModify(ctx, auth, existing.createdByUserId);
 
   const type = patch.type ?? existing.type;
+  const categoryId = patch.categoryId !== undefined ? patch.categoryId : existing.categoryId;
   const data: TransactionData = {
     type,
     amountAgorot: patch.amountAgorot ?? existing.amountAgorot,
-    categoryId: patch.categoryId !== undefined ? patch.categoryId : existing.categoryId,
+    categoryId,
+    subCategoryId: patch.subCategoryId !== undefined ? patch.subCategoryId : categoryId !== existing.categoryId ? null : existing.subCategoryId,
     description: patch.description !== undefined ? patch.description : existing.description,
     transactionDate: dateOnlyToDate(patch.transactionDate ?? dateToDateOnly(existing.transactionDate)),
     paymentMethodId: patch.paymentMethodId !== undefined ? patch.paymentMethodId : existing.paymentMethodId,
