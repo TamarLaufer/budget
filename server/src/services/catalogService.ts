@@ -68,6 +68,7 @@ export async function createPaymentMethod(ctx: HouseholdContext, name: string): 
 export async function listSubCategories(
   ctx: HouseholdContext,
   categoryId: string,
+  includeInactive: boolean,
 ): Promise<SubCategoryDto[]> {
   const category = await categoriesRepository.findInHousehold(
     ctx.householdId,
@@ -78,6 +79,7 @@ export async function listSubCategories(
   const subCategories = await subCategoriesRepository.list(
     ctx.householdId,
     categoryId,
+    includeInactive,
   );
   return subCategories.map(toSubCategoryDto);
 }
@@ -103,8 +105,24 @@ export async function createSubCategory(
   return toSubCategoryDto(subCategory);
 }
 
-
-// ---- Subcategories ----
+/**
+ * Renames and/or (de)activates a subcategory. It is looked up through its parent category's
+ * household, so another household's id is reported as not found. Names stay unique within the
+ * category across active and inactive subcategories (the database's unique key).
+ */
+export async function updateSubCategory(
+  ctx: HouseholdContext,
+  subCategoryId: string,
+  patch: { name?: string; isActive?: boolean },
+): Promise<SubCategoryDto> {
+  const existing = await subCategoriesRepository.findInHousehold(ctx.householdId, subCategoryId);
+  if (!existing) throw notFound("SUBCATEGORY_NOT_FOUND", "Subcategory was not found");
+  const subCategory = await rethrowNameTaken(
+    "SUBCATEGORY_NAME_TAKEN",
+    subCategoriesRepository.update(existing.id, patch),
+  );
+  return toSubCategoryDto(subCategory);
+}
 
 
 export async function updatePaymentMethod(

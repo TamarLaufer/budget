@@ -74,6 +74,7 @@ export function createApiRouter(verifier: TokenVerifier, budgetAlerts: BudgetAle
 
   household.get("/subcategories", subCategories.list);
   household.post("/subcategories", manager, subCategories.create);
+  household.patch("/subcategories/:id", manager, subCategories.update);
 
   household.get("/payment-methods", paymentMethods.list);
   household.post("/payment-methods", manager, paymentMethods.create);

@@ -210,10 +210,17 @@ export interface SubCategoryDto {
   id: string;
   categoryId: string;
   name: string;
+  isActive: boolean;
   createdAt: string;
 }
 
 export interface CreateSubCategoryRequest {
   categoryId: string;
   name: string;
+}
+
+/** The id and parent category never change; only the name and status can. */
+export interface UpdateSubCategoryRequest {
+  name?: string;
+  isActive?: boolean;
 }

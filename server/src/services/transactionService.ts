@@ -37,12 +37,13 @@ export async function get(ctx: HouseholdContext, transactionId: string): Promise
  * Business rules shared by create and update:
  * - EXPENSE requires a category; incomeSource only applies to INCOME.
  * - Referenced category / payment method must belong to the caller's household.
- * - Newly chosen categories / payment methods must be active (an edit may keep an inactive one).
+ * - Newly chosen categories / subcategories / payment methods must be active (an edit may keep an
+ *   inactive one).
  */
 async function validateReferences(
   ctx: HouseholdContext,
   data: TransactionData,
-  previous?: { categoryId: string | null; paymentMethodId: string | null },
+  previous?: { categoryId: string | null; subCategoryId: string | null; paymentMethodId: string | null },
 ): Promise<void> {
   if (data.type === "EXPENSE" && !data.categoryId) {
     throw badRequest("CATEGORY_REQUIRED", "Expenses require a category");
@@ -77,6 +78,10 @@ async function validateReferences(
       "SUBCATEGORY_CATEGORY_MISMATCH",
       "Subcategory does not belong to the selected category",
     );
+  }
+
+  if (!subCategory.isActive && subCategory.id !== previous?.subCategoryId) {
+    throw badRequest("SUBCATEGORY_INACTIVE", "Subcategory is inactive");
   }
 }
 

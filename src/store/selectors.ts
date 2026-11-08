@@ -6,7 +6,7 @@ import { isDateInPeriod, periodKey } from "../budget/period";
 import type { RootState } from "./index";
 import { idleLoad, type LoadState } from "./shared";
 import { budgetsAdapter } from "./slices/budgetsSlice";
-import { categoriesAdapter, paymentMethodsAdapter } from "./slices/catalogSlices";
+import { categoriesAdapter, paymentMethodsAdapter, subCategoriesAdapter } from "./slices/catalogSlices";
 import { transactionsAdapter } from "./slices/transactionsSlice";
 
 /*
@@ -18,6 +18,25 @@ export const transactionSelectors = transactionsAdapter.getSelectors((s: RootSta
 export const categorySelectors = categoriesAdapter.getSelectors((s: RootState) => s.categories);
 export const budgetSelectors = budgetsAdapter.getSelectors((s: RootState) => s.budgets);
 export const paymentMethodSelectors = paymentMethodsAdapter.getSelectors((s: RootState) => s.paymentMethods);
+
+export const selectSubCategoryLoad = (
+  state: RootState,
+  categoryId: string,
+) => state.subCategories.loadByCategory[categoryId] ?? idleLoad;
+
+export const subCategorySelectors = subCategoriesAdapter.getSelectors(
+  (state: RootState) => state.subCategories,
+);
+
+
+export const selectSubCategoriesByCategory = createSelector(
+  [
+    subCategorySelectors.selectAll,
+    (_state: RootState, categoryId: string) => categoryId,
+  ],
+  (subCategories, categoryId) =>
+    subCategories.filter((item) => item.categoryId === categoryId),
+);
 
 export const selectPeriod = (s: RootState) => s.period;
 

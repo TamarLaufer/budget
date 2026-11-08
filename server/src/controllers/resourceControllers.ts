@@ -45,6 +45,7 @@ export const subCategories = {
       await catalogService.listSubCategories(
         getHousehold(req),
         query.categoryId,
+        query.includeInactive ?? false,
       ),
     );
   }) satisfies RequestHandler,
@@ -58,6 +59,12 @@ export const subCategories = {
         body.name,
       ),
     );
+  }) satisfies RequestHandler,
+
+  update: (async (req, res) => {
+    const { id } = idParamsSchema.parse(req.params);
+    const body = updateNamedSchema.parse(req.body);
+    res.json(await catalogService.updateSubCategory(getHousehold(req), id, body));
   }) satisfies RequestHandler,
 };
 

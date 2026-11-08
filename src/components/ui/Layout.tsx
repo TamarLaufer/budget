@@ -92,6 +92,7 @@ export const SectionTitle = styled.Text`
 export const BodyText = styled.Text`
   font-size: ${fontSize.body}px;
   color: ${colors.text};
+  font-weight: 700;
 `;
 
 export const MutedText = styled.Text`

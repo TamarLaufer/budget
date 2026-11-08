@@ -89,6 +89,7 @@ export const toSubCategoryDto = (s: SubCategory): SubCategoryDto => ({
   id: s.id,
   categoryId: s.categoryId,
   name: s.name,
+  isActive: s.isActive,
   createdAt: s.createdAt.toISOString(),
 });
 

@@ -18,12 +18,14 @@ export function findInHousehold(
 export function list(
   householdId: string,
   categoryId: string,
+  includeInactive: boolean,
   db: Db = getPrisma(),
 ) {
   return db.subCategory.findMany({
     where: {
       categoryId,
       category: { householdId },
+      ...(includeInactive ? {} : { isActive: true }),
     },
     orderBy: [{ name: "asc" }, { id: "asc" }],
   });
@@ -43,4 +45,13 @@ export function create(
       },
     },
   });
+}
+
+/** Callers must first confirm the subcategory belongs to their household (findInHousehold). */
+export function update(
+  subCategoryId: string,
+  data: { name?: string; isActive?: boolean },
+  db: Db = getPrisma(),
+) {
+  return db.subCategory.update({ where: { id: subCategoryId }, data });
 }

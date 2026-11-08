@@ -86,6 +86,8 @@ function AppStack({ phase }: { phase: AppPhase }) {
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="transaction/new" options={{ headerShown: true, presentation: "modal" }} />
         <Stack.Screen name="transaction/[id]" options={{ headerShown: true }} />
+        <Stack.Screen name="category/new" options={{ headerShown: true, presentation: "modal" }} />
+        <Stack.Screen name="category/[id]" options={{ headerShown: true }} />
         <Stack.Screen name="budgets" options={{ headerShown: true }} />
         <Stack.Screen name="practice" options={{ headerShown: true }} />
       </Stack.Protected>

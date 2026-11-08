@@ -101,4 +101,5 @@ export type CreateSubCategoryInput =
 
 export const subCategoryListQuerySchema = z.strictObject({
   categoryId: idSchema,
+  includeInactive: queryBooleanSchema.optional(),
 });

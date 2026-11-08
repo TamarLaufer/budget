@@ -70,9 +70,6 @@ export function CategoryCard({
       $isSelected={isSelected}
       style={animatedStyle}
     >
-      <HeaderRow>
-        <Name>{name}</Name>
-
         {isOver ? (
           <OverBadgeContainer>
             <OverBadge>
@@ -80,7 +77,11 @@ export function CategoryCard({
             </OverBadge>
           </OverBadgeContainer>
         ) : null}
+        
+      <HeaderRow>
+        <Name>{name}</Name>
       </HeaderRow>
+
 
       <DetailRow>
         <DetailLabel>{strings.BUDGET}</DetailLabel>
