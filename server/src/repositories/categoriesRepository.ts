@@ -26,3 +26,18 @@ export function update(
 ) {
   return db.category.update({ where: { id: categoryId }, data });
 }
+
+export async function incrementSelectionCount(householdId: string, categoryId: string) {
+  const [category] = await getPrisma().category.updateManyAndReturn({
+    where: {
+      id: categoryId,
+      householdId,
+      isActive: true,
+    },
+    data: {
+      selectionCount: { increment: 1 },
+    },
+  });
+
+  return category ?? null;
+}

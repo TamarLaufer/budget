@@ -1,4 +1,4 @@
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
 import { FlatList, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -17,10 +17,11 @@ import { TransactionRow } from "../../components/TransactionRow/TransactionRow";
 import { useDebouncedValue } from "../../hooks/useDebouncedValue";
 import { useScreenData } from "../../hooks/useScreenData";
 import { useAppDispatch, useAppSelector } from "../../store";
-import { categorySelectors, selectTransactionsForPeriod, type Dataset } from "../../store/selectors";
+import { categorySelectors, subCategorySelectors, selectTransactionsForPeriod, type Dataset } from "../../store/selectors";
 import { periodShifted } from "../../store/slices/periodSlice";
 import { strings } from "../../strings/he";
 import { colors, spacing } from "../../theme";
+import { fetchSubCategories } from "../../store/slices/catalogSlices";
 
 /** What this screen shows; loaded when missing, stale or past the freshness limit. */
 const DATASETS: readonly Dataset[] = ["transactions", "categories"];
@@ -43,11 +44,15 @@ export default function TransactionsScreen() {
   const transactions = useAppSelector(selectTransactionsForPeriod);
   const categories = useAppSelector(categorySelectors.selectAll);
   const memberCount = useAppSelector((s) => s.household.members.length);
+  const subCategories = useAppSelector(subCategorySelectors.selectAll);
 
   const [filters, setFilters] = useState<TransactionFilters>(noFilters);
   const query = useDebouncedValue(filters.query);
 
-  const categoryNames = useMemo(() => new Map(categories.map((c) => [c.id, c.name])), [categories]);
+  const categoryNames = useMemo(
+    () => new Map(categories.map((c) => [c.id, c.name])), 
+    [categories]);
+  
   const visible = useMemo(
     () => filterTransactions(transactions, { ...filters, query }, categoryNames),
     [transactions, filters, query, categoryNames],
@@ -64,21 +69,48 @@ export default function TransactionsScreen() {
   ];
 
   const openTransaction = useCallback((id: string) => router.push(`/transaction/${id}`), []);
+
+  const subCategoryNames = useMemo(
+  () => new Map(subCategories.map((s) => [s.id, s.name])),
+  [subCategories],
+  );
+  
   const renderItem = useCallback(
     ({ item }: { item: TransactionDto }) => (
       <TransactionRow
         transaction={item}
         categoryName={item.categoryId ? (categoryNames.get(item.categoryId) ?? null) : null}
+        subCategoryName={item.subCategoryId ? (subCategoryNames.get(item.subCategoryId) ?? null): null}
         showCreator={memberCount > 1}
         onPress={openTransaction}
       />
     ),
-    [categoryNames, memberCount, openTransaction],
+    [categoryNames, subCategoryNames, memberCount, openTransaction],
+  );
+
+  const categoryIdsForSubCategories = useMemo(() => {
+  const ids = new Set<string>();
+
+  for (const transaction of transactions) {
+      if (transaction.categoryId && transaction.subCategoryId) {
+        ids.add(transaction.categoryId);
+      }
+    }
+
+    return [...ids];
+  }, [transactions]);
+
+  useFocusEffect(
+    useCallback(() => {
+      for (const categoryId of categoryIdsForSubCategories) {
+        void dispatch(fetchSubCategories(categoryId));
+      }
+    }, [dispatch, categoryIdsForSubCategories]),
   );
 
   if (!load.loaded && load.status === "failed") {
     return <ErrorView message={errorMessage(load.error)} onRetry={refresh} />;
-  }
+    }
   if (!load.loaded) return <LoadingView />;
 
   const header = (

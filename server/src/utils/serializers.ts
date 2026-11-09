@@ -83,6 +83,7 @@ export const toCategoryDto = (c: Category): CategoryDto => ({
   isActive: c.isActive,
   createdAt: c.createdAt.toISOString(),
   updatedAt: c.updatedAt.toISOString(),
+  selectionCount: c.selectionCount,
 });
 
 export const toSubCategoryDto = (s: SubCategory): SubCategoryDto => ({

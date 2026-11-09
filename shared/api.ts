@@ -89,6 +89,7 @@ export interface CategoryDto {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  selectionCount: number;
 }
 
 export interface PaymentMethodDto {

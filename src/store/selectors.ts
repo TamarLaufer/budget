@@ -14,10 +14,10 @@ import { transactionsAdapter } from "./slices/transactionsSlice";
  * records and never written back into the store.
  */
 
-export const transactionSelectors = transactionsAdapter.getSelectors((s: RootState) => s.transactions);
-export const categorySelectors = categoriesAdapter.getSelectors((s: RootState) => s.categories);
-export const budgetSelectors = budgetsAdapter.getSelectors((s: RootState) => s.budgets);
-export const paymentMethodSelectors = paymentMethodsAdapter.getSelectors((s: RootState) => s.paymentMethods);
+export const transactionSelectors = transactionsAdapter.getSelectors((state: RootState) => state.transactions);
+export const categorySelectors = categoriesAdapter.getSelectors((state: RootState) => state.categories);
+export const budgetSelectors = budgetsAdapter.getSelectors((state: RootState) => state.budgets);
+export const paymentMethodSelectors = paymentMethodsAdapter.getSelectors((state: RootState) => state.paymentMethods);
 
 export const selectSubCategoryLoad = (
   state: RootState,

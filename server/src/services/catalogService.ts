@@ -48,6 +48,22 @@ export async function updateCategory(
   return toCategoryDto(category);
 }
 
+export async function recordCategorySelection(
+  ctx: HouseholdContext,
+  categoryId: string,
+): Promise<CategoryDto> {
+  const category = await categoriesRepository.incrementSelectionCount(
+    ctx.householdId,
+    categoryId,
+  );
+
+  if (!category) {
+    throw notFound("CATEGORY_NOT_FOUND", "Active category was not found");
+  }
+
+  return toCategoryDto(category);
+}
+
 // ---- Payment methods ----
 
 export async function listPaymentMethods(

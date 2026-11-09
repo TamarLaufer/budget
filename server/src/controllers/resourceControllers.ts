@@ -20,6 +20,7 @@ import {
   subCategoryListQuerySchema,
 } from "../validators/resourceValidators.js";
 
+
 export const categories = {
   list: (async (req, res) => {
     const query = listActiveQuerySchema.parse(req.query);
@@ -36,6 +37,11 @@ export const categories = {
     const body = updateNamedSchema.parse(req.body);
     res.json(await catalogService.updateCategory(getHousehold(req), id, body));
   }) satisfies RequestHandler,
+
+  recordSelection: (async (req, res) => {
+  const { id } = idParamsSchema.parse(req.params);
+  res.json(await catalogService.recordCategorySelection(getHousehold(req), id));
+}) satisfies RequestHandler,
 };
 
 export const subCategories = {

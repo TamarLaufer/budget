@@ -39,6 +39,12 @@ export function NewTransactionScreen() {
   const period = useAppSelector((s) => s.period);
   const categories = useAppSelector(selectActiveCategories);
   const paymentMethods = useAppSelector(selectActivePaymentMethods);
+  const me = useAppSelector((s) => s.auth.me);
+
+  const categoryUsageKey = me?.membership
+    ? `spendo:category-usage:v1:${me.user.id}:${me.membership.household.id}`
+    : undefined;
+
   const [error, setError] = useState<string | null>(null);
   const initialValues = useMemo(() => emptyFormValues(defaultDate(period)), [period]);
 
@@ -65,7 +71,7 @@ export function NewTransactionScreen() {
         submitLabel={strings.SAVE}
         onSubmit={submit}
         submitError={error}
-      />
+        categoryUsageKey={categoryUsageKey}      />
     </ScrollScreen>
   );
 }
