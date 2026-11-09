@@ -22,7 +22,9 @@ function initFirebaseApp(config: AppConfig["firebase"]): App {
   if (existing) return existing;
 
   if (config.serviceAccountBase64) {
-      const json = JSON.parse(Buffer.from(config.serviceAccountBase64, "base64").toString("utf8")) as {
+    const json = JSON.parse(
+      Buffer.from(config.serviceAccountBase64, "base64").toString("utf8"),
+    ) as {
       project_id: string;
       client_email: string;
       private_key: string;
@@ -30,11 +32,11 @@ function initFirebaseApp(config: AppConfig["firebase"]): App {
     };
 
     console.log("FIREBASE KEY LOADED", {
-    projectId: json.project_id,
-    clientEmail: json.client_email,
-    privateKeyId: json.private_key_id,
-  });
-    
+      projectId: json.project_id,
+      clientEmail: json.client_email,
+      privateKeyId: json.private_key_id,
+    });
+
     return initializeApp({
       credential: cert({
         projectId: json.project_id,
@@ -46,16 +48,22 @@ function initFirebaseApp(config: AppConfig["firebase"]): App {
   }
   // Without explicit credentials, firebase-admin uses GOOGLE_APPLICATION_CREDENTIALS if set.
   // Signature verification only needs the project ID.
-  return initializeApp(config.projectId ? { projectId: config.projectId } : undefined);
+  return initializeApp(
+    config.projectId ? { projectId: config.projectId } : undefined,
+  );
 }
 
 /**
  * Production token verifier. Every request is verified independently: signature, issuer,
  * audience (project ID) and expiry are checked by firebase-admin; optionally revocation too.
  */
-export function createFirebaseTokenVerifier(config: AppConfig["firebase"]): TokenVerifier {
+export function createFirebaseTokenVerifier(
+  config: AppConfig["firebase"],
+): TokenVerifier {
   if (!config.projectId) {
-    throw new Error("FIREBASE_PROJECT_ID must be set to verify Firebase ID tokens");
+    throw new Error(
+      "FIREBASE_PROJECT_ID must be set to verify Firebase ID tokens",
+    );
   }
   const auth = getAuth(initFirebaseApp(config));
 
@@ -71,13 +79,22 @@ export function createFirebaseTokenVerifier(config: AppConfig["firebase"]): Toke
       } catch (error) {
         const code = errorCode(error);
         if (code && EXPIRED_CODES.has(code)) {
-          throw unauthorized("TOKEN_EXPIRED", "Authentication token has expired");
+          throw unauthorized(
+            "TOKEN_EXPIRED",
+            "Authentication token has expired",
+          );
         }
         if (code && REVOKED_CODES.has(code)) {
-          throw unauthorized("TOKEN_REVOKED", "Authentication session is no longer valid");
+          throw unauthorized(
+            "TOKEN_REVOKED",
+            "Authentication session is no longer valid",
+          );
         }
         if (code?.startsWith("auth/")) {
-          throw unauthorized("INVALID_TOKEN", "Authentication token is invalid");
+          throw unauthorized(
+            "INVALID_TOKEN",
+            "Authentication token is invalid",
+          );
         }
         // Anything else (network failure reaching Google, misconfiguration) is a server error,
         // not the client's fault; let the error handler log it and return 500.

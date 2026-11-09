@@ -8,7 +8,12 @@ import { BudgetSummary } from "../../components/BudgetSummary/BudgetSummary";
 import { CategoryCard } from "../../components/CategoryCard/CategoryCard";
 import Header from "../../components/Header/Header";
 import { Button } from "../../components/ui/Button";
-import { EmptyState, ErrorBanner, ErrorView, LoadingView } from "../../components/ui/Feedback";
+import {
+  EmptyState,
+  ErrorBanner,
+  ErrorView,
+  LoadingView,
+} from "../../components/ui/Feedback";
 import { ScrollScreen } from "../../components/ui/Layout";
 import { useScreenData } from "../../hooks/useScreenData";
 import { useSelectedCategory } from "../../hooks/useSelectedCategory";
@@ -45,7 +50,8 @@ const MonthlySnapshotScreen = () => {
   const canManage = useAppSelector(selectCanManage);
   const { snapshot } = dashboard;
 
-  const { categorySetState, selectedCategoryId, clearSelectedId } = useSelectedCategory();
+  const { categorySetState, selectedCategoryId, clearSelectedId } =
+    useSelectedCategory();
   const [showOverBudgetOnly, setShowOverBudgetOnly] = useState(false);
 
   if (!load.loaded && load.status === "failed") {
@@ -72,7 +78,12 @@ const MonthlySnapshotScreen = () => {
   };
 
   return (
-    <ScrollScreen withTopInset refreshing={refreshing} onRefresh={refresh}>
+    <ScrollScreen
+      withTopInset
+      refreshing={refreshing}
+      onRefresh={refresh}
+      avoidKeyboard
+    >
       <Header
         month={periodToDate(period)}
         onPrevious={() => dispatch(periodShifted(-1))}
@@ -80,31 +91,51 @@ const MonthlySnapshotScreen = () => {
       />
 
       {/* Stale data stays visible when a background refresh fails. */}
-      <ErrorBanner message={load.status === "failed" ? errorMessage(load.error) : null} onRetry={refresh} />
+      <ErrorBanner
+        message={load.status === "failed" ? errorMessage(load.error) : null}
+        onRetry={refresh}
+      />
 
       <BudgetSummary totals={snapshot.totals} />
 
       <IncomeRow>
         <IncomeLabel>{strings.INCOME}</IncomeLabel>
-        <IncomeValue $color={colors.success}>{formatAgorot(dashboard.totalIncome)}</IncomeValue>
+        <IncomeValue $color={colors.success}>
+          {formatAgorot(dashboard.totalIncome)}
+        </IncomeValue>
         <IncomeLabel>{strings.NET}</IncomeLabel>
-        <IncomeValue $color={dashboard.net < 0 ? colors.danger : colors.success}>
-            {formatCurrency(dashboard.net)}
+        <IncomeValue
+          $color={dashboard.net < 0 ? colors.danger : colors.success}
+        >
+          {formatCurrency(dashboard.net)}
         </IncomeValue>
       </IncomeRow>
 
-      <Button label={strings.ADD_TRANSACTION} onPress={() => router.push("/transaction/new")} testID="add-transaction" />
+      <Button
+        label={strings.ADD_TRANSACTION}
+        onPress={() => router.push("/transaction/new")}
+        testID="add-transaction"
+      />
 
       <SectionTitleContainer>
-        <SectionTitle accessibilityRole="header">{strings.CATEGORIES}</SectionTitle>
+        <SectionTitle accessibilityRole="header">
+          {strings.CATEGORIES}
+        </SectionTitle>
       </SectionTitleContainer>
 
       {categories.length === 0 ? (
-        <EmptyState title={strings.NO_CATEGORIES} hint={strings.NO_CATEGORIES_HINT} />
+        <EmptyState
+          title={strings.NO_CATEGORIES}
+          hint={strings.NO_CATEGORIES_HINT}
+        />
       ) : (
         <>
           <ShowAllPress onPress={toggleCategories} accessibilityRole="button">
-            <ShowAllText>{showOverBudgetOnly ? strings.SHOW_ALL : strings.SHOW_OVER_BUDGET_ONLY}</ShowAllText>
+            <ShowAllText>
+              {showOverBudgetOnly
+                ? strings.SHOW_ALL
+                : strings.SHOW_OVER_BUDGET_ONLY}
+            </ShowAllText>
           </ShowAllPress>
           {categoriesToDisplay.map((category) => (
             <CategoryCard
@@ -118,7 +149,11 @@ const MonthlySnapshotScreen = () => {
       )}
 
       {canManage ? (
-        <Button label={strings.EDIT_BUDGETS} variant="secondary" onPress={() => router.push("/budgets")} />
+        <Button
+          label={strings.EDIT_BUDGETS}
+          variant="secondary"
+          onPress={() => router.push("/budgets")}
+        />
       ) : null}
     </ScrollScreen>
   );
