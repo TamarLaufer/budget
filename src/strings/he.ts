@@ -256,4 +256,10 @@ export const strings = {
     INTERNAL_ERROR: "אירעה שגיאה בשרת. נסו שוב מאוחר יותר.",
   } as Record<string, string>,
   API_ERROR_FALLBACK: "הפעולה נכשלה. נסו שוב.",
+
+  //Excel File Export
+  EXPORT_EXCEL: "ייצוא כל התנועות לאקסל",
+  EXPORTING_EXCEL: "מכינים את הקובץ...",
+  EXPORT_SHARING_UNAVAILABLE: "שיתוף קבצים אינו זמין במכשיר הזה",
+  EXPORT_INVALID_FILE: "התקבל קובץ לא תקין מהשרת",
 };

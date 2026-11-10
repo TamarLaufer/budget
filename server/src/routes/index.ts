@@ -86,6 +86,7 @@ export function createApiRouter(verifier: TokenVerifier, budgetAlerts: BudgetAle
   household.delete("/budgets/:id", manager, budgets.remove);
 
   household.get("/transactions", transactions.list);
+  household.get("/transactions/export", transactions.exportExcel);
   household.post("/transactions", transactions.create);
   household.get("/transactions/:id", transactions.get);
   household.patch("/transactions/:id", transactions.update);

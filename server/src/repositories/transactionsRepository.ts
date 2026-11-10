@@ -86,3 +86,28 @@ export async function sumExpenses(
   });
   return result._sum.amountAgorot ?? 0;
 }
+
+
+export const TRANSACTION_EXPORT_BATCH_SIZE = 1000;
+
+/** Reads household transactions in batches for a complete export. */
+export function listExportBatch(
+  householdId: string,
+  afterId?: string,
+  db: Db = getPrisma(),
+) {
+  return db.transaction.findMany({
+    where: {
+      householdId,
+      ...(afterId ? { id: { gt: afterId } } : {}),
+    },
+    include: {
+      ...withCreator,
+      category: { select: { name: true } },
+      subCategory: { select: { name: true } },
+      paymentMethod: { select: { name: true } },
+    },
+    orderBy: { id: "asc" },
+    take: TRANSACTION_EXPORT_BATCH_SIZE,
+  });
+}

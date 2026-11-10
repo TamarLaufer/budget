@@ -19,6 +19,7 @@ import {
   createSubCategorySchema,
   subCategoryListQuerySchema,
 } from "../validators/resourceValidators.js";
+import { exportTransactionsToExcel } from "../services/transactionExportService.js";
 
 
 export const categories = {
@@ -130,6 +131,20 @@ export const createTransactionsController = (budgetAlerts: BudgetAlerts) => ({
     const { id } = idParamsSchema.parse(req.params);
     res.json(await transactionService.get(getHousehold(req), id));
   }) satisfies RequestHandler,
+  
+  exportExcel: (async (req, res) => {
+  const buffer = await exportTransactionsToExcel(getHousehold(req));
+
+  res.set({
+    "Content-Type":
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "Content-Disposition":
+      'attachment; filename="spendo-transactions.xlsx"',
+    "Cache-Control": "private, no-store",
+  });
+
+  res.status(200).send(buffer);
+  }) satisfies RequestHandler,
 
   create: (async (req, res) => {
     const body = createTransactionSchema.parse(req.body);
@@ -153,4 +168,5 @@ export const createTransactionsController = (budgetAlerts: BudgetAlerts) => ({
     await transactionService.remove(getHousehold(req), getAuth(req), id);
     res.status(204).end();
   }) satisfies RequestHandler,
+  
 });

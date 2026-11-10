@@ -1,12 +1,12 @@
 import { router, useFocusEffect } from "expo-router";
-import { useCallback, useMemo, useState } from "react";
-import { FlatList, RefreshControl } from "react-native";
+import { useCallback, useMemo, useRef, useState } from "react";
+import { ActivityIndicator, FlatList, RefreshControl } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { styled } from "styled-components/native";
 
 import type { TransactionDto, TransactionType } from "../../../shared/api";
-import { errorMessage } from "../../api/errorMessage";
 import { filterTransactions, noFilters, type TransactionFilters } from "../../budget/filters";
+import { errorMessage, messageFromUnknown } from "../../api/errorMessage";
 import { periodToDate } from "../../budget/period";
 import Header from "../../components/Header/Header";
 import { Button } from "../../components/ui/Button";
@@ -20,8 +20,10 @@ import { useAppDispatch, useAppSelector } from "../../store";
 import { categorySelectors, subCategorySelectors, selectTransactionsForPeriod, type Dataset } from "../../store/selectors";
 import { periodShifted } from "../../store/slices/periodSlice";
 import { strings } from "../../strings/he";
-import { colors, spacing } from "../../theme";
+import { colors, radius, spacing } from "../../theme";
 import { fetchSubCategories } from "../../store/slices/catalogSlices";
+import { shareTransactionsExcel } from "../../budget/exportTransactions";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 /** What this screen shows; loaded when missing, stale or past the freshness limit. */
 const DATASETS: readonly Dataset[] = ["transactions", "categories"];
@@ -33,6 +35,27 @@ const Filters = styled.View`
 
 const Separator = styled.View`
   height: ${spacing.sm}px;
+`;
+
+const ActionsRow = styled.View`
+  flex-direction: row;
+  align-items: stretch;
+  gap: ${spacing.sm}px;
+`;
+
+const AddAction = styled.View`
+  flex: 1;
+`;
+
+const ExportAction = styled.Pressable`
+  width: 48px;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  background-color: ${colors.surface};
+  border-width: 1px;
+  border-color: ${colors.border};
+  border-radius: ${radius.md}px;
 `;
 
 const ALL = "__all__";
@@ -108,6 +131,27 @@ export default function TransactionsScreen() {
     }, [dispatch, categoryIdsForSubCategories]),
   );
 
+  const [exporting, setExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const exportInProgress = useRef(false);
+
+  const exportExcel = async () => {
+    if (exportInProgress.current) return;
+
+    exportInProgress.current = true;
+    setExporting(true);
+    setExportError(null);
+
+    try {
+      await shareTransactionsExcel();
+    } catch (error) {
+      setExportError(messageFromUnknown(error));
+    } finally {
+      exportInProgress.current = false;
+      setExporting(false);
+    }
+  };
+
   if (!load.loaded && load.status === "failed") {
     return <ErrorView message={errorMessage(load.error)} onRetry={refresh} />;
     }
@@ -115,14 +159,36 @@ export default function TransactionsScreen() {
 
   const header = (
     <Filters>
-      <Header
-        title={strings.TAB_TRANSACTIONS}
-        month={periodToDate(period)}
-        onPrevious={() => dispatch(periodShifted(-1))}
-        onNext={() => dispatch(periodShifted(1))}
-      />
+    <Header
+      title={strings.TAB_TRANSACTIONS}
+      month={periodToDate(period)}
+      onPrevious={() => dispatch(periodShifted(-1))}
+      onNext={() => dispatch(periodShifted(1))}
+      titleAction={
+        <ExportAction
+          onPress={() => void exportExcel()}
+          disabled={exporting}
+          accessibilityRole="button"
+          accessibilityLabel={strings.EXPORT_EXCEL}
+          accessibilityState={{ disabled: exporting, busy: exporting }}
+          testID="export-transactions"
+        >
+          {exporting ? (
+            <ActivityIndicator size="small" color="#16A34A" />
+          ) : (
+            <MaterialCommunityIcons
+              name="microsoft-excel"
+              size={26}
+              color="#16A34A"
+            />
+          )}
+        </ExportAction>
+      }
+    />
       <ErrorBanner message={load.status === "failed" ? errorMessage(load.error) : null} onRetry={refresh} />
       <Button label={strings.ADD_TRANSACTION} onPress={() => router.push("/transaction/new")} />
+
+      <ErrorBanner message={exportError} />
       <TextField
         placeholder={strings.SEARCH}
         value={filters.query}
