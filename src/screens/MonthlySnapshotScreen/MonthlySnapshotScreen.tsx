@@ -83,9 +83,13 @@ const MonthlySnapshotScreen = () => {
     ? categories.filter((category) => category.isOver)
     : categories;
 
-  const selectCategory = (categoryId: string) => {
-    if (selectedCategoryId === categoryId) clearSelectedId();
-    else categorySetState(categoryId);
+  const goToCategoryScreen = (categoryId: string) => {
+    categorySetState(categoryId);
+
+    router.push({
+      pathname: "/category/[id]",
+      params: { id: categoryId },
+    });
   };
 
   return (
@@ -155,7 +159,7 @@ const MonthlySnapshotScreen = () => {
             <CategoryCard
               key={category.id}
               category={category}
-              onPress={() => selectCategory(category.id)}
+              onPress={() => goToCategoryScreen(category.id)}
               isSelected={selectedCategoryId === category.id}
             />
           ))}
