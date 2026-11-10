@@ -37,16 +37,6 @@ const Separator = styled.View`
   height: ${spacing.sm}px;
 `;
 
-const ActionsRow = styled.View`
-  flex-direction: row;
-  align-items: stretch;
-  gap: ${spacing.sm}px;
-`;
-
-const AddAction = styled.View`
-  flex: 1;
-`;
-
 const ExportAction = styled.Pressable`
   width: 48px;
   min-height: 48px;

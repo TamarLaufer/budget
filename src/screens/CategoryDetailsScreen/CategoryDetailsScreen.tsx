@@ -8,7 +8,7 @@ import {
   InfoBanner,
   LoadingView,
 } from "../../components/ui/Feedback";
-import { ScrollScreen, SectionTitle } from "../../components/ui/Layout";
+import { ScrollScreen } from "../../components/ui/Layout";
 import { useScreenData } from "../../hooks/useScreenData";
 import { useAppSelector } from "../../store";
 import {
