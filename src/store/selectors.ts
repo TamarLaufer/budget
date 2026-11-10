@@ -6,7 +6,7 @@ import { isDateInPeriod, periodKey } from "../budget/period";
 import type { RootState } from "./index";
 import { idleLoad, type LoadState } from "./shared";
 import { budgetsAdapter } from "./slices/budgetsSlice";
-import { categoriesAdapter, paymentMethodsAdapter } from "./slices/catalogSlices";
+import { categoriesAdapter, paymentMethodsAdapter, subCategoriesAdapter } from "./slices/catalogSlices";
 import { transactionsAdapter } from "./slices/transactionsSlice";
 
 /*
@@ -14,16 +14,46 @@ import { transactionsAdapter } from "./slices/transactionsSlice";
  * records and never written back into the store.
  */
 
-export const transactionSelectors = transactionsAdapter.getSelectors((s: RootState) => s.transactions);
-export const categorySelectors = categoriesAdapter.getSelectors((s: RootState) => s.categories);
-export const budgetSelectors = budgetsAdapter.getSelectors((s: RootState) => s.budgets);
-export const paymentMethodSelectors = paymentMethodsAdapter.getSelectors((s: RootState) => s.paymentMethods);
+export const transactionSelectors = transactionsAdapter.getSelectors((state: RootState) => state.transactions);
+export const categorySelectors = categoriesAdapter.getSelectors((state: RootState) => state.categories);
+export const budgetSelectors = budgetsAdapter.getSelectors((state: RootState) => state.budgets);
+export const paymentMethodSelectors = paymentMethodsAdapter.getSelectors((state: RootState) => state.paymentMethods);
+
+export const selectSubCategoryLoad = (
+  state: RootState,
+  categoryId: string,
+) => state.subCategories.loadByCategory[categoryId] ?? idleLoad;
+
+export const subCategorySelectors = subCategoriesAdapter.getSelectors(
+  (state: RootState) => state.subCategories,
+);
+
+
+export const selectSubCategoriesByCategory = createSelector(
+  [
+    subCategorySelectors.selectAll,
+    (_state: RootState, categoryId: string) => categoryId,
+  ],
+  (subCategories, categoryId) =>
+    subCategories.filter((item) => item.categoryId === categoryId),
+);
 
 export const selectPeriod = (s: RootState) => s.period;
 
 export const selectTransactionsForPeriod = createSelector(
   [transactionSelectors.selectAll, selectPeriod],
   (transactions, period) => transactions.filter((t) => isDateInPeriod(t.transactionDate, period)),
+);
+
+/** How many of the month's newest transactions the dashboard shows. */
+export const RECENT_TRANSACTIONS_LIMIT = 3;
+
+/**
+ * The selected month's newest transactions (income and expenses). The list is already sorted
+ * newest first, so this takes a copy of its head and never sorts or mutates store arrays.
+ */
+export const selectRecentTransactionsForPeriod = createSelector([selectTransactionsForPeriod], (transactions) =>
+  transactions.slice(0, RECENT_TRANSACTIONS_LIMIT),
 );
 
 export const selectBudgetsForPeriod = createSelector(

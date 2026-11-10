@@ -7,6 +7,7 @@ export interface TransactionFormValues {
   type: TransactionType;
   amount: string;
   categoryId: string | null;
+  subCategoryId: string | null;
   transactionDate: string;
   description: string;
   paymentMethodId: string | null;
@@ -50,6 +51,7 @@ export function validateTransactionForm(values: TransactionFormValues): Transact
       type: values.type,
       amountAgorot,
       categoryId: values.categoryId,
+      subCategoryId: values.categoryId ? values.subCategoryId : null,
       transactionDate: values.transactionDate,
       description: description || null,
       paymentMethodId: values.paymentMethodId,
@@ -63,6 +65,7 @@ export function formValuesFromTransaction(t: TransactionDto): TransactionFormVal
     type: t.type,
     amount: agorotToInput(t.amountAgorot),
     categoryId: t.categoryId,
+    subCategoryId: t.subCategoryId,
     transactionDate: t.transactionDate,
     description: t.description ?? "",
     paymentMethodId: t.paymentMethodId,
@@ -75,6 +78,7 @@ export function emptyFormValues(transactionDate: string): TransactionFormValues 
     type: "EXPENSE",
     amount: "",
     categoryId: null,
+    subCategoryId: null,
     transactionDate,
     description: "",
     paymentMethodId: null,

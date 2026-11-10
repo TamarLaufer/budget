@@ -8,7 +8,7 @@ import { errorMessage, messageFromUnknown } from "../../api/errorMessage";
 import { isBiometricPlatform } from "../../appLock/biometrics";
 import { signOut } from "../../auth/session";
 import { Button } from "../../components/ui/Button";
-import { ChipGroup } from "../../components/ui/ChipGroup";
+import { ChipGroup } from "../../components/ui/ChipGroup/ChipGroup";
 import { ErrorBanner, InfoBanner } from "../../components/ui/Feedback";
 import { BodyText, Card, MutedText, Row, ScrollScreen, SectionTitle, SpaceBetweenRow, Title } from "../../components/ui/Layout";
 import { TextField } from "../../components/ui/TextField";

@@ -5,7 +5,11 @@ import { sessionEnded } from "./shared";
 import appLockReducer from "./slices/appLockSlice";
 import authReducer from "./slices/authSlice";
 import budgetsReducer from "./slices/budgetsSlice";
-import { categoriesReducer, paymentMethodsReducer } from "./slices/catalogSlices";
+import {
+  categoriesReducer,
+  paymentMethodsReducer,
+  subCategoriesReducer,
+} from "./slices/catalogSlices";
 import householdReducer from "./slices/householdSlice";
 import periodReducer from "./slices/periodSlice";
 import transactionsReducer from "./slices/transactionsSlice";
@@ -16,6 +20,7 @@ const appReducer = combineReducers({
   household: householdReducer,
   transactions: transactionsReducer,
   categories: categoriesReducer,
+  subCategories: subCategoriesReducer,
   budgets: budgetsReducer,
   paymentMethods: paymentMethodsReducer,
   period: periodReducer,

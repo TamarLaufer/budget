@@ -1,4 +1,10 @@
-import { ActivityIndicator } from "react-native";
+import {
+  ActivityIndicator,
+  type PressableProps,
+  type StyleProp,
+  type TextStyle,
+  type ViewStyle,
+} from "react-native";
 import { styled } from "styled-components/native";
 
 import { colors, fontSize, radius, spacing } from "../../theme";
@@ -45,10 +51,25 @@ interface ButtonProps {
   disabled?: boolean;
   compact?: boolean;
   testID?: string;
+  style?: StyleProp<ViewStyle>;
+  textStyle?: StyleProp<TextStyle>;
+  hitSlop?: PressableProps["hitSlop"];
 }
 
-export function Button({ label, onPress, variant = "primary", loading = false, disabled = false, compact = false, testID }: ButtonProps) {
+export function Button({
+  label,
+  onPress,
+  variant = "primary",
+  loading = false,
+  disabled = false,
+  compact = false,
+  testID,
+  style,
+  textStyle,
+  hitSlop,
+}: ButtonProps) {
   const inactive = disabled || loading;
+
   return (
     <Pressable
       $variant={variant}
@@ -59,11 +80,17 @@ export function Button({ label, onPress, variant = "primary", loading = false, d
       accessibilityRole="button"
       accessibilityState={{ disabled: inactive, busy: loading }}
       testID={testID}
+      style={style}
+      hitSlop={hitSlop}
     >
       {loading ? (
         <ActivityIndicator color={foreground[variant]} />
       ) : (
-        <Label $variant={variant} $compact={compact}>
+        <Label
+          $variant={variant}
+          $compact={compact}
+          style={textStyle}
+        >
           {label}
         </Label>
       )}

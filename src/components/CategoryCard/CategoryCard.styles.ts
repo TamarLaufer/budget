@@ -21,18 +21,20 @@ export const Card = styled.Pressable<OverProps>`
 `;
 
 export const HeaderRow = styled.View`
+  direction: ltr;
   flex-direction: row;
   align-items: center;
-  justify-content: flex-end;
+  justify-content: space-between;
   gap: ${spacing.sm}px;
-  margin-bottom: 0px;
 `;
 
 export const Name = styled.Text`
-  flex-shrink: 1;
+  flex: 1;
+  text-align: right;
   font-size: ${fontSize.value}px;
   font-weight: 700;
   color: ${colors.text};
+  margin-bottom: 10px;
 `;
 
 export const OverBadgeContainer = styled.View`

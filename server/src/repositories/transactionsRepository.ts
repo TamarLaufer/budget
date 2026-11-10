@@ -33,7 +33,9 @@ export function list(householdId: string, filter: TransactionFilter, db: Db = ge
   return db.transaction.findMany({
     where,
     include: withCreator,
-    orderBy: [{ transactionDate: "desc" }, { createdAt: "desc" }],
+    // Newest first with a unique tie-breaker, so the first TRANSACTION_LIST_LIMIT rows are always
+    // the newest ones and match the app's sort (compareTransactions in transactionsSlice).
+    orderBy: [{ transactionDate: "desc" }, { createdAt: "desc" }, { id: "desc" }],
     take: TRANSACTION_LIST_LIMIT,
   });
 }
@@ -46,6 +48,7 @@ export interface TransactionData {
   type: TransactionType;
   amountAgorot: number;
   categoryId: string | null;
+  subCategoryId: string | null;
   description: string | null;
   transactionDate: Date;
   paymentMethodId: string | null;
@@ -84,4 +87,29 @@ export async function sumExpenses(
     _sum: { amountAgorot: true },
   });
   return result._sum.amountAgorot ?? 0;
+}
+
+
+export const TRANSACTION_EXPORT_BATCH_SIZE = 1000;
+
+/** Reads household transactions in batches for a complete export. */
+export function listExportBatch(
+  householdId: string,
+  afterId?: string,
+  db: Db = getPrisma(),
+) {
+  return db.transaction.findMany({
+    where: {
+      householdId,
+      ...(afterId ? { id: { gt: afterId } } : {}),
+    },
+    include: {
+      ...withCreator,
+      category: { select: { name: true } },
+      subCategory: { select: { name: true } },
+      paymentMethod: { select: { name: true } },
+    },
+    orderBy: { id: "asc" },
+    take: TRANSACTION_EXPORT_BATCH_SIZE,
+  });
 }

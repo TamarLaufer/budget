@@ -18,16 +18,28 @@ export function BudgetSummary({ totals }: BudgetSummaryProps) {
   return (
     <Card>
       <Row>
-        <SummaryItem label={strings.TOTAL_BUDGET} value={formatAgorot(totals.budget)} />
-        <SummaryItem label={strings.EXPENSES} value={formatAgorot(totals.spent)} />
+        <SummaryItem
+          label={strings.TOTAL_BUDGET}
+          value={formatAgorot(totals.budget)}
+        />
+        <SummaryItem
+          label={strings.EXPENSES}
+          value={formatAgorot(totals.spent)}
+        />
         <SummaryItem
           label={balanceLabel}
           value={formatAgorot(Math.abs(totals.remaining))}
           color={balanceColor}
         />
       </Row>
-      <ProgressBar fill={totals.fill} percentUsed={totals.percentUsed} isOver={totals.isOver} />
-      <Caption>{format(strings.BUDGET_USED, { percent: totals.percentUsed })}</Caption>
+      <ProgressBar
+        fill={totals.fill}
+        percentUsed={totals.percentUsed}
+        isOver={totals.isOver}
+      />
+      <Caption>
+        {format(strings.BUDGET_USED, { percent: totals.percentUsed })}
+      </Caption>
     </Card>
   );
 }

@@ -14,6 +14,7 @@ import type {
   ReceivedInvitationDto,
   TransactionDto,
   UserDto,
+  SubCategoryDto,
 } from "../../../shared/api.js";
 import type {
   Category,
@@ -23,6 +24,7 @@ import type {
   MonthlyBudget,
   PaymentMethod,
   Transaction,
+  SubCategory,
 } from "../generated/prisma/client.js";
 import { dateToDateOnly } from "./dates.js";
 
@@ -81,6 +83,15 @@ export const toCategoryDto = (c: Category): CategoryDto => ({
   isActive: c.isActive,
   createdAt: c.createdAt.toISOString(),
   updatedAt: c.updatedAt.toISOString(),
+  selectionCount: c.selectionCount,
+});
+
+export const toSubCategoryDto = (s: SubCategory): SubCategoryDto => ({
+  id: s.id,
+  categoryId: s.categoryId,
+  name: s.name,
+  isActive: s.isActive,
+  createdAt: s.createdAt.toISOString(),
 });
 
 export const toPaymentMethodDto = (p: PaymentMethod): PaymentMethodDto => ({
@@ -102,6 +113,7 @@ export const toTransactionDto = (t: Transaction & { createdBy: UserRow }): Trans
   type: t.type,
   amountAgorot: t.amountAgorot,
   categoryId: t.categoryId,
+  subCategoryId: t.subCategoryId,
   description: t.description,
   transactionDate: dateToDateOnly(t.transactionDate),
   paymentMethodId: t.paymentMethodId,

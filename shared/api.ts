@@ -89,6 +89,7 @@ export interface CategoryDto {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  selectionCount: number;
 }
 
 export interface PaymentMethodDto {
@@ -111,6 +112,7 @@ export interface TransactionDto {
   type: TransactionType;
   amountAgorot: number;
   categoryId: string | null;
+  subCategoryId: string | null;
   description: string | null;
   /** "YYYY-MM-DD" */
   transactionDate: string;
@@ -191,6 +193,7 @@ export interface CreateTransactionRequest {
   transactionDate: string;
   paymentMethodId?: string | null;
   incomeSource?: string | null;
+  subCategoryId?: string | null;
 }
 
 export type UpdateTransactionRequest = Partial<CreateTransactionRequest>;
@@ -201,4 +204,24 @@ export interface TransactionListQuery {
   categoryId?: string;
   type?: TransactionType;
   q?: string;
+
+}
+
+export interface SubCategoryDto {
+  id: string;
+  categoryId: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+export interface CreateSubCategoryRequest {
+  categoryId: string;
+  name: string;
+}
+
+/** The id and parent category never change; only the name and status can. */
+export interface UpdateSubCategoryRequest {
+  name?: string;
+  isActive?: boolean;
 }

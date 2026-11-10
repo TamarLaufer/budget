@@ -1,204 +1,82 @@
-import { useFocusEffect } from "expo-router";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AppState } from "react-native";
+import { router } from "expo-router";
 
-import type { CategoryDto } from "../../../shared/api";
-import { errorMessage, messageFromUnknown } from "../../api/errorMessage";
+import { errorMessage } from "../../api/errorMessage";
 import { Button } from "../../components/ui/Button";
-import { EmptyState, ErrorBanner, ErrorView, InfoBanner, LoadingView } from "../../components/ui/Feedback";
-import { BodyText, Card, Row, ScrollScreen, SectionTitle, SpaceBetweenRow, Title } from "../../components/ui/Layout";
-import { TextField } from "../../components/ui/TextField";
+import {
+  EmptyState,
+  ErrorView,
+  InfoBanner,
+  LoadingView,
+} from "../../components/ui/Feedback";
+import { ScrollScreen, SectionTitle, Title } from "../../components/ui/Layout";
 import { useScreenData } from "../../hooks/useScreenData";
-import { useAppDispatch, useAppSelector } from "../../store";
-import { categorySelectors, selectCanManage, type Dataset } from "../../store/selectors";
-import { createCategory, updateCategory } from "../../store/slices/catalogSlices";
+import { useAppSelector } from "../../store";
+import {
+  categorySelectors,
+  selectCanManage,
+  type Dataset,
+} from "../../store/selectors";
 import { strings } from "../../strings/he";
+import { HeaderRow, RowList } from "./CategoriesScreen.styles";
+import { CategoryItem } from "./CategoryItem";
 
 /** What this screen shows; loaded when missing, stale or past the freshness limit. */
 const DATASETS: readonly Dataset[] = ["categories"];
 
+/**
+ * The categories list: compact rows grouped by active/inactive. Managing a category happens on
+ * its details screen (category/[id]); creating one on the new-category screen (category/new).
+ */
 export default function CategoriesScreen() {
   const { load, refresh, refreshing } = useScreenData(DATASETS);
   const categories = useAppSelector(categorySelectors.selectAll);
   const canManage = useAppSelector(selectCanManage);
 
-  if (!load.loaded && load.status === "failed") return <ErrorView message={errorMessage(load.error)} onRetry={refresh} />;
+  if (!load.loaded && load.status === "failed")
+    return <ErrorView message={errorMessage(load.error)} onRetry={refresh} />;
   if (!load.loaded) return <LoadingView />;
 
   const active = categories.filter((c) => c.isActive);
   const inactive = categories.filter((c) => !c.isActive);
 
   return (
-    <ScrollScreen withTopInset refreshing={refreshing} onRefresh={refresh}>
-      <Title>{strings.TAB_CATEGORIES}</Title>
-      {canManage ? <NewCategoryCard /> : <InfoBanner message={strings.MANAGERS_ONLY} />}
+    <ScrollScreen
+      withTopInset
+      refreshing={refreshing}
+      onRefresh={refresh}
+      avoidKeyboard
+    >
+      <HeaderRow>
+        <Title>{strings.TAB_CATEGORIES}</Title>
+        {canManage ? (
+          <Button
+            label={strings.ADD}
+            compact
+            onPress={() => router.push("/category/new")}
+            testID="add-category"
+          />
+        ) : null}
+      </HeaderRow>
+      {canManage ? null : <InfoBanner message={strings.MANAGERS_ONLY} />}
 
       <SectionTitle>{strings.ACTIVE_CATEGORIES}</SectionTitle>
-      {active.length === 0 ? <EmptyState title={strings.NO_CATEGORIES} /> : null}
-      {active.map((c) => (
-        <CategoryItem key={c.id} category={c} canManage={canManage} />
-      ))}
-
-      {inactive.length > 0 ? <SectionTitle>{strings.INACTIVE_CATEGORIES}</SectionTitle> : null}
-      {inactive.map((c) => (
-        <CategoryItem key={c.id} category={c} canManage={canManage} />
-      ))}
-    </ScrollScreen>
-  );
-}
-
-function NewCategoryCard() {
-  const dispatch = useAppDispatch();
-  const [name, setName] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // The attempt whose failure may still be shown; dismissing moves on, so a late response can't.
-  const attempt = useRef(0);
-
-  const dismissError = useCallback(() => {
-    attempt.current += 1;
-    setError(null);
-  }, []);
-
-  // Clear the form when leaving the Categories tab.
-  useFocusEffect(
-    useCallback(() => {
-      return () => {
-        setName("");
-        dismissError();
-      };
-    }, [dismissError]),
-  );
-
-  useEffect(() => {
-    const subscription = AppState.addEventListener("change", (state) => {
-      if (state === "background") dismissError();
-    });
-    return () => subscription.remove();
-  }, [dismissError]);
-
-  const changeName = (value: string) => {
-    setName(value);
-    dismissError();
-  };
-
-  const submit = async () => {
-    dismissError();
-    const current = attempt.current;
-    const submitted = name;
-    setBusy(true);
-    try {
-      await dispatch(createCategory(submitted.trim())).unwrap();
-      // Keep anything typed while the request was in flight.
-      if (attempt.current === current) {
-        setName((latest) => (latest === submitted ? "" : latest));
-      }
-    } catch (e) {
-      if (attempt.current === current) setError(messageFromUnknown(e));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Card>
-      <TextField label={strings.NEW_CATEGORY} placeholder={strings.CATEGORY_NAME} value={name} onChangeText={changeName} maxLength={60} />
-      <ErrorBanner message={error} />
-      <Button label={strings.ADD} onPress={() => void submit()} loading={busy} disabled={!name.trim()} />
-    </Card>
-  );
-}
-
-function CategoryItem({ category, canManage }: { category: CategoryDto; canManage: boolean }) {
-  const dispatch = useAppDispatch();
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(category.name);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const attempt = useRef(0);
-
-  const dismissError = useCallback(() => {
-    attempt.current += 1;
-    setError(null);
-  }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      return () => {
-        setName("");
-        dismissError();
-        setEditing(false);
-      };
-    }, [dismissError]),
-  );
-
-  const save = async (changes: { name?: string; isActive?: boolean }) => {
-    dismissError();
-    const current = attempt.current;
-    setBusy(true);
-    try {
-      await dispatch(updateCategory({ id: category.id, changes })).unwrap();
-      if (attempt.current === current) {
-        setEditing(false);
-      }
-      
-    } catch (e) {
-      if (attempt.current === current) {
-        setError(messageFromUnknown(e));
-      }
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Card>
-      {editing ? (
-        <TextField value={name} onChangeText={(value) => {
-          setName(value);
-          dismissError();
-        }} maxLength={60} autoFocus accessibilityLabel={strings.CATEGORY_NAME} />
-      ) : (
-        <SpaceBetweenRow>
-          <BodyText>{category.name}</BodyText>
-        </SpaceBetweenRow>
-      )}
-      <ErrorBanner message={error} />
-      {canManage ? (
-        <Row>
-          {editing ? (
-            <>
-              <Button label={strings.SAVE} compact loading={busy} disabled={!name.trim()} onPress={() => save({ name: name.trim() })} />
-              <Button
-                label={strings.CANCEL}
-                compact
-                variant="secondary"
-                onPress={() => {
-                  setName(category.name);
-                  setEditing(false);
-                  dismissError();
-                }}
-              />
-            </>
-          ) : (
-            <>
-              <Button label={strings.RENAME} compact variant="secondary" onPress={() => {
-                setName(category.name);
-                dismissError();
-                setEditing(true);
-              }} />
-              <Button
-                label={category.isActive ? strings.DEACTIVATE : strings.ACTIVATE}
-                compact
-                variant={category.isActive ? "danger" : "secondary"}
-                loading={busy}
-                onPress={() => save({ isActive: !category.isActive })}
-              />
-            </>
-          )}
-        </Row>
+      {active.length === 0 ? (
+        <EmptyState title={strings.NO_CATEGORIES} />
       ) : null}
-    </Card>
+      <RowList>
+        {active.map((c) => (
+          <CategoryItem key={c.id} category={c} />
+        ))}
+      </RowList>
+
+      {inactive.length > 0 ? (
+        <SectionTitle>{strings.INACTIVE_CATEGORIES}</SectionTitle>
+      ) : null}
+      <RowList>
+        {inactive.map((c) => (
+          <CategoryItem key={c.id} category={c} />
+        ))}
+      </RowList>
+    </ScrollScreen>
   );
 }

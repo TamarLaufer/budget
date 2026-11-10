@@ -34,9 +34,10 @@ interface ScrollScreenProps {
   refreshing?: boolean;
   onRefresh?: () => void;
   avoidKeyboard?: boolean;
+  testID?: string;
 }
 
-export function ScrollScreen({ children, withTopInset = false, refreshing = false, onRefresh, avoidKeyboard = false, }: ScrollScreenProps) {
+export function ScrollScreen({ children, withTopInset = false, refreshing = false, onRefresh, avoidKeyboard = false, testID }: ScrollScreenProps) {
   const insets = useSafeAreaInsets();
   const headerHeight = useContext(HeaderHeightContext) ?? 0;
     return (
@@ -49,6 +50,7 @@ export function ScrollScreen({ children, withTopInset = false, refreshing = fals
     <Scroll
       $insets={insets}
       $withTopInset={withTopInset}
+      testID={testID}
       refreshControl={onRefresh ? <RefreshControl refreshing={refreshing} onRefresh={onRefresh} /> : undefined}
     >
       {children}
@@ -92,6 +94,7 @@ export const SectionTitle = styled.Text`
 export const BodyText = styled.Text`
   font-size: ${fontSize.body}px;
   color: ${colors.text};
+  font-weight: 700;
 `;
 
 export const MutedText = styled.Text`

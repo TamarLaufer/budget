@@ -19,20 +19,37 @@ import {
   type LoadState,
 } from "../shared";
 
-/** Newest first: by date, then by creation time for same-day entries. */
-export const transactionsAdapter = createEntityAdapter<TransactionDto>({
-  sortComparer: (a, b) =>
-    b.transactionDate.localeCompare(a.transactionDate) || b.createdAt.localeCompare(a.createdAt),
-});
+/** Descending code-unit order, which for these ASCII values matches PostgreSQL's ordering. */
+const descending = (a: string, b: string) => (a < b ? 1 : a > b ? -1 : 0);
+
+/**
+ * Newest first: by date, then by creation time for same-day entries, then by id so exact ties
+ * always resolve the same way. Must match the server's list order (transactionsRepository.list).
+ */
+export const compareTransactions = (a: TransactionDto, b: TransactionDto) =>
+  descending(a.transactionDate, b.transactionDate) ||
+  descending(a.createdAt, b.createdAt) ||
+  descending(a.id, b.id);
+
+export const transactionsAdapter = createEntityAdapter<TransactionDto>({ sortComparer: compareTransactions });
 
 interface TransactionsExtra {
   /** Load state per month, keyed by periodKey ("2026-10"). */
   months: Record<string, LoadState>;
   /** Counts successful creates, updates and deletes, to spot fetches that raced with one. */
   revision: number;
+  /**
+   * Counts requests to clear the transaction list's search and filters (e.g. "View all" on the
+   * dashboard); the list screen keeps its filters locally and resets them when this changes.
+   */
+  filtersResetRequests: number;
 }
 
-const initialState = transactionsAdapter.getInitialState<TransactionsExtra>({ months: {}, revision: 0 });
+const initialState = transactionsAdapter.getInitialState<TransactionsExtra>({
+  months: {},
+  revision: 0,
+  filtersResetRequests: 0,
+});
 
 export const fetchMonthTransactions = apiThunk(
   "transactions/fetchMonth",
@@ -51,7 +68,11 @@ export const deleteTransaction = apiThunk("transactions/delete", (id: string) =>
 const transactionsSlice = createSlice({
   name: "transactions",
   initialState,
-  reducers: {},
+  reducers: {
+    transactionFiltersCleared: (state) => {
+      state.filtersResetRequests += 1;
+    },
+  },
   extraReducers: (builder) => {
     builder
       .addCase(householdChanged, () => initialState)
@@ -94,4 +115,5 @@ const transactionsSlice = createSlice({
   },
 });
 
+export const { transactionFiltersCleared } = transactionsSlice.actions;
 export default transactionsSlice.reducer;

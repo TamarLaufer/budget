@@ -7,14 +7,15 @@ import { Provider } from "react-redux";
 import type { CategoryDto } from "../../shared/api";
 import { ApiError } from "../api/client";
 import { api } from "../api/endpoints";
-import CategoriesScreen from "../screens/CategoriesScreen/CategoriesScreen";
+import { NewCategoryScreen } from "../screens/NewCategoryScreen/NewCategoryScreen";
 import { createStore } from "../store";
 import { loadMe } from "../store/slices/authSlice";
+import { fetchCategories } from "../store/slices/catalogSlices";
 import { strings } from "../strings/he";
-import { fulfilled, makeCategory, meWithHousehold } from "../test-utils/fixtures";
+import { fulfilled, makeCategory, meWithHousehold, respond } from "../test-utils/fixtures";
 
 /**
- * Stands in for a tab navigator: the screen stays mounted (and keeps its state) while blurred,
+ * Stands in for the navigator: the screen stays mounted (and keeps its state) while blurred,
  * and only its focus effects run. Mounting counts as gaining focus.
  */
 jest.mock("expo-router", () => {
@@ -36,6 +37,8 @@ jest.mock("expo-router", () => {
         };
       }, [run]),
     useNavigation: () => ({ isFocused: () => true }),
+    router: { back: jest.fn() },
+    Stack: { Screen: () => null },
   };
 });
 
@@ -43,7 +46,6 @@ jest.mock("../api/endpoints", () => ({
   api: { categories: { list: jest.fn(), create: jest.fn(), update: jest.fn() } },
 }));
 
-const listCategories = api.categories.list as jest.Mock;
 const createCategoryApi = api.categories.create as jest.Mock;
 
 const DUPLICATE = strings.API_ERRORS.CATEGORY_NAME_TAKEN!;
@@ -64,7 +66,6 @@ let appStateListeners: ((state: AppStateStatus) => void)[] = [];
 
 beforeEach(() => {
   jest.resetAllMocks();
-  listCategories.mockResolvedValue([food]);
   appStateListeners = [];
   jest.spyOn(AppState, "addEventListener").mockImplementation((_type, listener) => {
     appStateListeners.push(listener);
@@ -76,16 +77,17 @@ afterEach(() => jest.restoreAllMocks());
 
 function renderScreen(store: ReturnType<typeof createStore>) {
   store.dispatch(fulfilled(loadMe, meWithHousehold, undefined));
+  respond(store, fetchCategories, [food], undefined);
   return render(
     <SafeAreaProvider initialMetrics={{ insets: { top: 0, left: 0, right: 0, bottom: 0 }, frame: { x: 0, y: 0, width: 400, height: 800 } }}>
       <Provider store={store}>
-        <CategoriesScreen />
+        <NewCategoryScreen />
       </Provider>
     </SafeAreaProvider>,
   );
 }
 
-async function renderCategoriesTab(store = createStore()) {
+async function renderNewCategoryScreen(store = createStore()) {
   await renderScreen(store);
   await screen.findByLabelText(strings.NEW_CATEGORY);
   return store;
@@ -103,12 +105,12 @@ async function failWithDuplicate(value = "Food") {
 }
 
 const tab = (Router as unknown as { __tab: { blur: () => void; focus: () => void } }).__tab;
-const leaveTab = () => act(async () => tab.blur());
-const returnToTab = () => act(async () => tab.focus());
+const leaveScreen = () => act(async () => tab.blur());
+const returnToScreen = () => act(async () => tab.focus());
 
 describe("category creation error", () => {
   it("shows the duplicate-name error, keeping the entered name and the cached categories", async () => {
-    const store = await renderCategoriesTab();
+    const store = await renderNewCategoryScreen();
     await failWithDuplicate();
 
     expect(nameInput().props.value).toBe("Food");
@@ -117,7 +119,7 @@ describe("category creation error", () => {
   });
 
   it("clears when the name is edited, including when it is emptied", async () => {
-    await renderCategoriesTab();
+    await renderNewCategoryScreen();
     await failWithDuplicate();
     await typeName("Foo");
     expect(screen.queryByText(DUPLICATE)).toBeNull();
@@ -127,19 +129,19 @@ describe("category creation error", () => {
     expect(screen.queryByText(DUPLICATE)).toBeNull();
   });
 
-  it("clears the error and entered name when leaving the tab", async () => {
-    await renderCategoriesTab();
+  it("clears the error and entered name when leaving the screen", async () => {
+    await renderNewCategoryScreen();
     await failWithDuplicate();
 
-    await leaveTab();
-    await returnToTab();
+    await leaveScreen();
+    await returnToScreen();
 
     expect(screen.queryByText(DUPLICATE)).toBeNull();
     expect(nameInput().props.value).toBe("");
   });
 
   it("clears when the app goes to the background, which is not a cold restart", async () => {
-    await renderCategoriesTab();
+    await renderNewCategoryScreen();
     await failWithDuplicate();
 
     await act(async () => appStateListeners.forEach((listener) => listener("background")));
@@ -149,7 +151,7 @@ describe("category creation error", () => {
   });
 
   it("clears before a new submission", async () => {
-    await renderCategoriesTab();
+    await renderNewCategoryScreen();
     await failWithDuplicate();
 
     const retry = deferred<CategoryDto>();
@@ -160,25 +162,39 @@ describe("category creation error", () => {
     await act(async () => retry.resolve(makeCategory({ id: "new", name: "Food" })));
   });
 
-  it("stays cleared after a successful retry, which also empties the input", async () => {
-    await renderCategoriesTab();
+  it("returns to the list after a successful retry, without the error", async () => {
+    const store = await renderNewCategoryScreen();
     await failWithDuplicate();
 
     createCategoryApi.mockResolvedValueOnce(makeCategory({ id: "new", name: "Toys" }));
     await typeName("Toys");
     await pressAdd();
 
-    await waitFor(() => expect(nameInput().props.value).toBe(""));
+    await waitFor(() => expect(Router.router.back).toHaveBeenCalledTimes(1));
     expect(screen.queryByText(DUPLICATE)).toBeNull();
+    expect(store.getState().categories.entities.new).toBeDefined();
+  });
+
+  it("sends one request when Add is pressed again while saving", async () => {
+    await renderNewCategoryScreen();
+    const response = deferred<CategoryDto>();
+    createCategoryApi.mockReturnValueOnce(response.promise);
+    await typeName("Toys");
+    await pressAdd();
+    // While saving, the button shows a spinner and is disabled.
+    await fireEvent.press(screen.getByRole("button", { busy: true }));
+
+    await act(async () => response.resolve(makeCategory({ id: "toys", name: "Toys" })));
+    expect(createCategoryApi).toHaveBeenCalledTimes(1);
   });
 
   it("is not stored, so a real cold start (new store, new screen) begins without it", async () => {
-    const store = await renderCategoriesTab();
+    const store = await renderNewCategoryScreen();
     await failWithDuplicate();
     expect(JSON.stringify(store.getState())).not.toContain("CATEGORY_NAME_TAKEN");
 
     await screen.unmount();
-    await renderCategoriesTab();
+    await renderNewCategoryScreen();
     expect(screen.queryByText(DUPLICATE)).toBeNull();
     expect(nameInput().props.value).toBe("");
   });
@@ -194,7 +210,7 @@ describe("late responses from an abandoned attempt", () => {
   }
 
   it("does not restore the error after the name was edited", async () => {
-    await renderCategoriesTab();
+    await renderNewCategoryScreen();
     const response = await submitPending();
     await typeName("Foo");
 
@@ -204,60 +220,51 @@ describe("late responses from an abandoned attempt", () => {
     expect(nameInput().props.value).toBe("Foo");
   });
 
-  it("does not restore the error after leaving the tab", async () => {
-    await renderCategoriesTab();
+  it("does not restore the error after leaving the screen", async () => {
+    await renderNewCategoryScreen();
     const response = await submitPending();
-    await leaveTab();
+    await leaveScreen();
 
     await act(async () => response.reject(duplicateError()));
-    await returnToTab();
+    await returnToScreen();
 
     expect(screen.queryByText(DUPLICATE)).toBeNull();
     expect(nameInput().props.value).toBe("");
   });
 
   it("does not erase a name edited while the request was in flight, but still stores the category", async () => {
-    const store = await renderCategoriesTab();
+    const store = await renderNewCategoryScreen();
     const response = await submitPending("Toys");
     await typeName("Toys 2");
 
     await act(async () => response.resolve(makeCategory({ id: "toys", name: "Toys" })));
 
     expect(nameInput().props.value).toBe("Toys 2");
+    expect(Router.router.back).not.toHaveBeenCalled();
     expect(store.getState().categories.entities.toys).toBeDefined();
   });
 
-  it("empties the submitted name if the request succeeds after leaving the tab", async () => {
-    await renderCategoriesTab();
+  it("empties the submitted name if the request succeeds after leaving the screen", async () => {
+    await renderNewCategoryScreen();
     const response = await submitPending("Toys");
-    await leaveTab();
+    await leaveScreen();
 
     await act(async () => response.resolve(makeCategory({ id: "toys", name: "Toys" })));
-    await returnToTab();
+    await returnToScreen();
 
     expect(nameInput().props.value).toBe("");
+    expect(Router.router.back).not.toHaveBeenCalled();
   });
 });
 
 describe("genuine failures", () => {
   it("shows a network failure of the current attempt, keeping the entered name", async () => {
-    await renderCategoriesTab();
+    await renderNewCategoryScreen();
     createCategoryApi.mockRejectedValueOnce(new ApiError(0, "NETWORK_ERROR", "offline"));
     await typeName("Toys");
     await pressAdd();
 
     await screen.findByText(strings.API_ERRORS.NETWORK_ERROR!);
     expect(nameInput().props.value).toBe("Toys");
-  });
-
-  it("keeps showing a failed first load until retry succeeds", async () => {
-    listCategories.mockRejectedValue(new ApiError(0, "NETWORK_ERROR", "offline"));
-    await renderScreen(createStore());
-    await screen.findByText(strings.API_ERRORS.NETWORK_ERROR!);
-
-    listCategories.mockResolvedValue([food]);
-    await fireEvent.press(screen.getByText(strings.RETRY));
-    await screen.findByLabelText(strings.NEW_CATEGORY);
-    expect(screen.queryByText(strings.API_ERRORS.NETWORK_ERROR!)).toBeNull();
   });
 });

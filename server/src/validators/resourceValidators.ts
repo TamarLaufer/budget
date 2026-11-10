@@ -66,6 +66,7 @@ const transactionFields = {
   type: transactionTypeSchema,
   amountAgorot: positiveAgorotSchema,
   categoryId: idSchema.nullable().optional(),
+  subCategoryId: idSchema.nullable().optional(),
   description: optionalTextSchema,
   transactionDate: dateOnlySchema,
   paymentMethodId: idSchema.nullable().optional(),
@@ -79,6 +80,7 @@ export const updateTransactionSchema = z
     type: transactionFields.type.optional(),
     amountAgorot: transactionFields.amountAgorot.optional(),
     categoryId: transactionFields.categoryId,
+    subCategoryId: transactionFields.subCategoryId,
     description: transactionFields.description,
     transactionDate: transactionFields.transactionDate.optional(),
     paymentMethodId: transactionFields.paymentMethodId,
@@ -88,3 +90,16 @@ export const updateTransactionSchema = z
 
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
+
+export const createSubCategorySchema = z.strictObject({
+  categoryId: idSchema,
+  name: nameSchema,
+});
+
+export type CreateSubCategoryInput =
+  z.infer<typeof createSubCategorySchema>;
+
+export const subCategoryListQuerySchema = z.strictObject({
+  categoryId: idSchema,
+  includeInactive: queryBooleanSchema.optional(),
+});

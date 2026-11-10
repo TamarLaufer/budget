@@ -1,7 +1,8 @@
 /** Categories and payment methods: small household-wide lists, loaded once and kept in sync. */
 import { createEntityAdapter, createSlice } from "@reduxjs/toolkit";
 
-import type { CategoryDto, PaymentMethodDto, UpdateCategoryRequest, UpdatePaymentMethodRequest } from "../../../shared/api";
+import type { CategoryDto, PaymentMethodDto, UpdateCategoryRequest, UpdatePaymentMethodRequest, CreateSubCategoryRequest,
+SubCategoryDto, UpdateSubCategoryRequest, } from "../../../shared/api";
 import { api } from "../../api/endpoints";
 import {
   acceptResponse,
@@ -131,5 +132,103 @@ const paymentMethodsSlice = createSlice({
   },
 });
 
+export const subCategoriesAdapter = createEntityAdapter<SubCategoryDto>({
+  sortComparer: (a, b) => a.name.localeCompare(b.name) || a.id.localeCompare(b.id),
+});
+
+export const fetchSubCategories = apiThunk(
+  "subCategories/fetch",
+  (categoryId: string) => api.subCategories.list(categoryId),
+);
+
+export const createSubCategory = apiThunk(
+  "subCategories/create",
+  (body: CreateSubCategoryRequest) => api.subCategories.create(body),
+);
+
+export const updateSubCategory = apiThunk(
+  "subCategories/update",
+  ({ id, changes }: { id: string; changes: UpdateSubCategoryRequest }) => api.subCategories.update(id, changes),
+);
+
+const subCategoriesInitial = subCategoriesAdapter.getInitialState<{
+  loadByCategory: Record<string, LoadState | undefined>;
+  /** Per category: counts successful creates and updates, to spot fetches that raced with one. */
+  revisionByCategory: Record<string, number | undefined>;
+  /** Creates and updates sent since the household last changed; responses to others are ignored. */
+  mutationRequests: Record<string, boolean | undefined>;
+}>({
+  loadByCategory: {},
+  revisionByCategory: {},
+  mutationRequests: {},
+});
+
+type SubCategoriesState = typeof subCategoriesInitial;
+
+/** Stores a created or updated subcategory, unless it was sent before the household changed. */
+function storeMutation(state: SubCategoriesState, requestId: string, subCategory: SubCategoryDto) {
+  if (!state.mutationRequests[requestId]) return;
+  delete state.mutationRequests[requestId];
+  subCategoriesAdapter.upsertOne(state, subCategory);
+  const { categoryId } = subCategory;
+  state.revisionByCategory[categoryId] = (state.revisionByCategory[categoryId] ?? 0) + 1;
+}
+
+const subCategoriesSlice = createSlice({
+  name: "subCategories",
+  initialState: subCategoriesInitial,
+  reducers: {},
+  extraReducers: (builder) => {
+    builder
+      .addCase(householdChanged, () => subCategoriesInitial)
+      .addCase(fetchSubCategories.pending, (state, action) => {
+        const { arg: categoryId, requestId: id, startedAt } = action.meta;
+        const revision = state.revisionByCategory[categoryId] ?? 0;
+        state.loadByCategory[categoryId] = loadPending(state.loadByCategory[categoryId], { id, startedAt, revision });
+      })
+      .addCase(fetchSubCategories.fulfilled, (state, action) => {
+        const categoryId = action.meta.arg;
+        // Dropped (and marked stale) if a rename or (de)activation succeeded while it was in flight.
+        const fetchedAt = acceptResponse(
+          state.loadByCategory,
+          categoryId,
+          action.meta.requestId,
+          state.revisionByCategory[categoryId] ?? 0,
+        );
+        if (fetchedAt === null) return;
+
+        subCategoriesAdapter.upsertMany(state, action.payload);
+        state.loadByCategory[categoryId] = loadSucceeded(fetchedAt);
+      })
+      .addCase(fetchSubCategories.rejected, (state, action) => {
+        const categoryId = action.meta.arg;
+        const load = state.loadByCategory[categoryId];
+        if (isCurrentRequest(load, action.meta.requestId)) {
+          state.loadByCategory[categoryId] = loadFailed(load, action.payload);
+        }
+      })
+      .addCase(createSubCategory.pending, (state, action) => {
+        state.mutationRequests[action.meta.requestId] = true;
+      })
+      .addCase(createSubCategory.fulfilled, (state, action) => {
+        storeMutation(state, action.meta.requestId, action.payload);
+      })
+      .addCase(createSubCategory.rejected, (state, action) => {
+        delete state.mutationRequests[action.meta.requestId];
+      })
+      .addCase(updateSubCategory.pending, (state, action) => {
+        state.mutationRequests[action.meta.requestId] = true;
+      })
+      .addCase(updateSubCategory.fulfilled, (state, action) => {
+        storeMutation(state, action.meta.requestId, action.payload);
+      })
+      .addCase(updateSubCategory.rejected, (state, action) => {
+        delete state.mutationRequests[action.meta.requestId];
+      });
+  },
+});
+
+
 export const categoriesReducer = categoriesSlice.reducer;
 export const paymentMethodsReducer = paymentMethodsSlice.reducer;
+export const subCategoriesReducer = subCategoriesSlice.reducer;

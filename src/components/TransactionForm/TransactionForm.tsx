@@ -9,11 +9,13 @@ import {
 import { strings } from "../../strings/he";
 import { DateField } from "../DateField/DateField";
 import { Button } from "../ui/Button";
-import { ChipGroup, type ChipOption } from "../ui/ChipGroup";
+import { ChipGroup, type ChipOption } from "../ui/ChipGroup/ChipGroup";
 import { ErrorBanner } from "../ui/Feedback";
 import { Card } from "../ui/Layout";
 import { TextField } from "../ui/TextField";
-import { Field, FieldError, FieldLabel } from "./TransactionForm.styles";
+import { ButtonContainer, Field, FieldError, FieldLabel } from "./TransactionForm.styles";
+import { TransactionSubCategoryField } from "./TransactionSubCategoryField";
+import { useCategoryUsage } from "../../hooks/useCategoryUsage";
 
 const NONE = "__none__";
 
@@ -31,6 +33,7 @@ interface TransactionFormProps {
   /** Must reject on failure; the form then keeps every value so nothing the user typed is lost. */
   onSubmit: (request: CreateTransactionRequest) => Promise<void>;
   submitError: string | null;
+  categoryUsageKey?: string; 
 }
 
 export function TransactionForm({
@@ -40,10 +43,13 @@ export function TransactionForm({
   submitLabel,
   onSubmit,
   submitError,
+  categoryUsageKey,
 }: TransactionFormProps) {
   const [values, setValues] = useState(initialValues);
   const [errors, setErrors] = useState<Partial<Record<TransactionFormField, TransactionFormErrorKey>>>({});
   const [submitting, setSubmitting] = useState(false);
+  const { categoryUsage, recordCategorySelection } = useCategoryUsage(categoryUsageKey);
+  
 
   const set = <K extends keyof TransactionFormValues>(key: K, value: TransactionFormValues[K]) => {
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -53,9 +59,11 @@ export function TransactionForm({
   const categoryOptions = useMemo<ChipOption<string>[]>(
     () => [
       ...(values.type === "INCOME" ? [{ value: NONE, label: strings.NO_CATEGORY }] : []),
-      ...categories.map((c) => ({ value: c.id, label: c.isActive ? c.name : `${c.name} (${strings.INACTIVE})` })),
+      ...[...categories]
+        .sort((a, b) => (categoryUsage[b.id] ?? 0) - (categoryUsage[a.id] ?? 0))
+        .map((c) => ({ value: c.id, label: c.isActive ? c.name : `${c.name} (${strings.INACTIVE})` })),
     ],
-    [categories, values.type],
+    [categories, values.type, categoryUsage],
   );
 
   const paymentOptions = useMemo<ChipOption<string>[]>(
@@ -103,11 +111,35 @@ export function TransactionForm({
         <ChipGroup
           options={categoryOptions}
           selected={values.categoryId ?? (values.type === "INCOME" ? NONE : null)}
-          onSelect={(id) => set("categoryId", id === NONE ? null : id)}
+          onSelect={(id) => {
+            const categoryId = id === NONE ? null : id;
+
+            if (categoryId && categoryId !== values.categoryId) {
+              recordCategorySelection(categoryId);
+            }
+
+            setValues((prev) => ({
+              ...prev,
+              categoryId,
+              subCategoryId:
+                prev.categoryId === categoryId ? prev.subCategoryId : null,
+            }));
+
+            setErrors((prev) => ({ ...prev, categoryId: undefined }));
+          }}
         />
         {errorText("categoryId") ? <FieldError>{errorText("categoryId")}</FieldError> : null}
       </Field>
-
+      <TransactionSubCategoryField
+        categoryId={values.categoryId}
+        value={values.subCategoryId}
+        retainedSubCategoryId={
+          values.categoryId === initialValues.categoryId
+            ? initialValues.subCategoryId
+            : null
+        }
+        onChange={(subCategoryId) => set("subCategoryId", subCategoryId)}
+      />
       <DateField label={strings.DATE} value={values.transactionDate} onChange={(date) => set("transactionDate", date)} />
 
       <TextField
@@ -138,7 +170,9 @@ export function TransactionForm({
       ) : null}
 
       <ErrorBanner message={submitError} />
-      <Button label={submitting ? strings.SAVING : submitLabel} onPress={submit} loading={submitting} testID="submit-transaction" />
+      <ButtonContainer>
+        <Button label={submitting ? strings.SAVING : submitLabel} onPress={submit} loading={submitting} testID="submit-transaction" />
+      </ButtonContainer>
     </Card>
   );
 }

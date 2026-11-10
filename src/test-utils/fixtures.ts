@@ -11,6 +11,7 @@ export function makeTransaction(overrides: Partial<TransactionDto> = {}): Transa
     type: "EXPENSE",
     amountAgorot: 1000,
     categoryId: "food",
+    subCategoryId: null,
     description: null,
     transactionDate: "2026-10-10",
     paymentMethodId: null,
@@ -29,6 +30,7 @@ export function makeCategory(overrides: Partial<CategoryDto> = {}): CategoryDto 
     isActive: true,
     createdAt: `2026-01-01T00:00:${String(counter).padStart(2, "0")}.000Z`,
     updatedAt: "2026-01-01T00:00:00.000Z",
+    selectionCount: 0,
     ...overrides,
   };
 }

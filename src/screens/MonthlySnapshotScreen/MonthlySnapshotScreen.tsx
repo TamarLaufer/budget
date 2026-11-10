@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { errorMessage } from "../../api/errorMessage";
 import { formatAgorot } from "../../budget/money";
@@ -8,14 +8,21 @@ import { BudgetSummary } from "../../components/BudgetSummary/BudgetSummary";
 import { CategoryCard } from "../../components/CategoryCard/CategoryCard";
 import Header from "../../components/Header/Header";
 import { Button } from "../../components/ui/Button";
-import { EmptyState, ErrorBanner, ErrorView, LoadingView } from "../../components/ui/Feedback";
+import {
+  EmptyState,
+  ErrorBanner,
+  ErrorView,
+  LoadingView,
+} from "../../components/ui/Feedback";
 import { ScrollScreen } from "../../components/ui/Layout";
 import { useScreenData } from "../../hooks/useScreenData";
+import { useSubCategoriesForTransactions } from "../../hooks/useSubCategoriesForTransactions";
 import { useSelectedCategory } from "../../hooks/useSelectedCategory";
 import { useAppDispatch, useAppSelector } from "../../store";
 import {
   selectCanManage,
   selectDashboard,
+  selectRecentTransactionsForPeriod,
   selectSnapshotCategoriesInDisplayOrder,
   type Dataset,
 } from "../../store/selectors";
@@ -31,6 +38,7 @@ import {
   ShowAllPress,
   ShowAllText,
 } from "./MonthlySnapshotScreen.styles";
+import { RecentTransactions } from "./RecentTransactions";
 import { formatCurrency } from "@/functions/assets";
 
 /** What this screen shows; loaded when missing, stale or past the freshness limit. */
@@ -43,13 +51,22 @@ const MonthlySnapshotScreen = () => {
   const dashboard = useAppSelector(selectDashboard);
   const categories = useAppSelector(selectSnapshotCategoriesInDisplayOrder);
   const canManage = useAppSelector(selectCanManage);
+  const recentTransactions = useAppSelector(selectRecentTransactionsForPeriod);
+  const { retryFailed: retrySubCategories } = useSubCategoriesForTransactions(recentTransactions);
   const { snapshot } = dashboard;
 
-  const { categorySetState, selectedCategoryId, clearSelectedId } = useSelectedCategory();
+  // An explicit refresh also retries subcategory names that failed to load; nothing else does.
+  const refreshAll = useCallback(() => {
+    refresh();
+    retrySubCategories();
+  }, [refresh, retrySubCategories]);
+
+  const { categorySetState, selectedCategoryId, clearSelectedId } =
+    useSelectedCategory();
   const [showOverBudgetOnly, setShowOverBudgetOnly] = useState(false);
 
   if (!load.loaded && load.status === "failed") {
-    return <ErrorView message={errorMessage(load.error)} onRetry={refresh} />;
+    return <ErrorView message={errorMessage(load.error)} onRetry={refreshAll} />;
   }
   if (!load.loaded) return <LoadingView />;
 
@@ -66,13 +83,23 @@ const MonthlySnapshotScreen = () => {
     ? categories.filter((category) => category.isOver)
     : categories;
 
-  const selectCategory = (categoryId: string) => {
-    if (selectedCategoryId === categoryId) clearSelectedId();
-    else categorySetState(categoryId);
+  const goToCategoryScreen = (categoryId: string) => {
+    categorySetState(categoryId);
+
+    router.push({
+      pathname: "/category/[id]",
+      params: { id: categoryId },
+    });
   };
 
   return (
-    <ScrollScreen withTopInset refreshing={refreshing} onRefresh={refresh}>
+    <ScrollScreen
+      withTopInset
+      refreshing={refreshing}
+      onRefresh={refreshAll}
+      avoidKeyboard
+      testID="monthly-snapshot"
+    >
       <Header
         month={periodToDate(period)}
         onPrevious={() => dispatch(periodShifted(-1))}
@@ -80,37 +107,59 @@ const MonthlySnapshotScreen = () => {
       />
 
       {/* Stale data stays visible when a background refresh fails. */}
-      <ErrorBanner message={load.status === "failed" ? errorMessage(load.error) : null} onRetry={refresh} />
+      <ErrorBanner
+        message={load.status === "failed" ? errorMessage(load.error) : null}
+        onRetry={refreshAll}
+      />
 
       <BudgetSummary totals={snapshot.totals} />
 
       <IncomeRow>
         <IncomeLabel>{strings.INCOME}</IncomeLabel>
-        <IncomeValue $color={colors.success}>{formatAgorot(dashboard.totalIncome)}</IncomeValue>
+        <IncomeValue $color={colors.success}>
+          {formatAgorot(dashboard.totalIncome)}
+        </IncomeValue>
         <IncomeLabel>{strings.NET}</IncomeLabel>
-        <IncomeValue $color={dashboard.net < 0 ? colors.danger : colors.success}>
-            {formatCurrency(dashboard.net)}
+        <IncomeValue
+          $color={dashboard.net < 0 ? colors.danger : colors.success}
+        >
+          {formatCurrency(dashboard.net)}
         </IncomeValue>
       </IncomeRow>
 
-      <Button label={strings.ADD_TRANSACTION} onPress={() => router.push("/transaction/new")} testID="add-transaction" />
+      <Button
+        label={strings.ADD_TRANSACTION}
+        onPress={() => router.push("/transaction/new")}
+        testID="add-transaction"
+      />
+
+      <RecentTransactions transactions={recentTransactions} />
 
       <SectionTitleContainer>
-        <SectionTitle accessibilityRole="header">{strings.CATEGORIES}</SectionTitle>
+        <SectionTitle accessibilityRole="header">
+          {strings.CATEGORIES}
+        </SectionTitle>
       </SectionTitleContainer>
 
       {categories.length === 0 ? (
-        <EmptyState title={strings.NO_CATEGORIES} hint={strings.NO_CATEGORIES_HINT} />
+        <EmptyState
+          title={strings.NO_CATEGORIES}
+          hint={strings.NO_CATEGORIES_HINT}
+        />
       ) : (
         <>
           <ShowAllPress onPress={toggleCategories} accessibilityRole="button">
-            <ShowAllText>{showOverBudgetOnly ? strings.SHOW_ALL : strings.SHOW_OVER_BUDGET_ONLY}</ShowAllText>
+            <ShowAllText>
+              {showOverBudgetOnly
+                ? strings.SHOW_ALL
+                : strings.SHOW_OVER_BUDGET_ONLY}
+            </ShowAllText>
           </ShowAllPress>
           {categoriesToDisplay.map((category) => (
             <CategoryCard
               key={category.id}
               category={category}
-              onPress={() => selectCategory(category.id)}
+              onPress={() => goToCategoryScreen(category.id)}
               isSelected={selectedCategoryId === category.id}
             />
           ))}
@@ -118,7 +167,11 @@ const MonthlySnapshotScreen = () => {
       )}
 
       {canManage ? (
-        <Button label={strings.EDIT_BUDGETS} variant="secondary" onPress={() => router.push("/budgets")} />
+        <Button
+          label={strings.EDIT_BUDGETS}
+          variant="secondary"
+          onPress={() => router.push("/budgets")}
+        />
       ) : null}
     </ScrollScreen>
   );

@@ -53,3 +53,21 @@ export const NavText = styled.Text`
   include-font-padding: false;
   line-height: 26px;
 `;
+
+export const TitleRow = styled.View`
+  width: 100%;
+  flex-direction: row;
+  align-items: center;
+`;
+
+export const TitleCenter = styled.View`
+  flex: 1;
+  align-items: center;
+`;
+
+export const HeaderActionSlot = styled.View`
+  width: 48px;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+`;

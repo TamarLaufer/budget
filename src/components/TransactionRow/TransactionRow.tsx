@@ -49,18 +49,19 @@ function displayDate(dateOnly: string): string {
 interface TransactionRowProps {
   transaction: TransactionDto;
   categoryName: string | null;
+  subCategoryName: string | null;
   /** Shown when the household has several members, so everyone sees who recorded what. */
   showCreator: boolean;
   onPress: (id: string) => void;
 }
 
-function TransactionRowComponent({ transaction: t, categoryName, showCreator, onPress }: TransactionRowProps) {
-  const isIncome = t.type === "INCOME";
-  const title = t.description ?? (isIncome ? (t.incomeSource ?? strings.TYPE_INCOME) : (categoryName ?? strings.TYPE_EXPENSE));
-  const creator = t.createdBy.displayName ?? t.createdBy.email.split("@")[0] ?? "";
-  const meta = [displayDate(t.transactionDate), categoryName, showCreator ? format(strings.CREATED_BY, { name: creator }) : null]
-    .filter(Boolean)
-    .join(" · ");
+function TransactionRowComponent({ transaction: t, categoryName, subCategoryName, showCreator, onPress }: TransactionRowProps) {
+const isIncome = t.type === "INCOME";
+const description = t.description?.trim() || null;
+const title = description ?? (isIncome ? (t.incomeSource ?? strings.TYPE_INCOME) : (subCategoryName ?? categoryName ?? strings.TYPE_EXPENSE));
+const creator = t.createdBy.displayName ?? t.createdBy.email.split("@")[0] ?? "";
+const meta = [displayDate(t.transactionDate), categoryName, (description || isIncome) ? subCategoryName : null, showCreator ? format(strings.CREATED_BY,
+   { name: creator }) : null].filter(Boolean).join(" · ");
 
   return (
     <Pressable onPress={() => onPress(t.id)} accessibilityRole="button" accessibilityHint={strings.EDIT}>

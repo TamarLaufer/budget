@@ -30,6 +30,7 @@ const tx = (overrides: Partial<TransactionDto>): TransactionDto => ({
   type: "EXPENSE",
   amountAgorot: 100,
   categoryId: "food",
+  subCategoryId: null,
   description: null,
   transactionDate: "2026-10-01",
   paymentMethodId: null,

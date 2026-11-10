@@ -111,6 +111,8 @@ export const strings = {
   // ---- Transactions ----
   NO_TRANSACTIONS: "אין תנועות בחודש הזה",
   NO_MATCHING_TRANSACTIONS: "אין תנועות שתואמות לסינון",
+  RECENT_TRANSACTIONS: "תנועות אחרונות",
+  VIEW_ALL_TRANSACTIONS: "לכל התנועות",
   SEARCH: "חיפוש",
   ALL: "הכל",
   TYPE_EXPENSE: "הוצאה",
@@ -133,7 +135,8 @@ export const strings = {
     TOO_LONG: "הטקסט ארוך מדי",
     DATE_INVALID: "תאריך לא תקין",
   },
-
+  TRANSACTION_TYPE: "סוג תנועה:",
+  
   // ---- Categories & budgets ----
   NEW_CATEGORY: "קטגוריה חדשה",
   CATEGORY_NAME: "שם הקטגוריה",
@@ -145,6 +148,19 @@ export const strings = {
   MANAGERS_ONLY: "רק מנהלי משק הבית יכולים לערוך",
   BUDGET_FOR_MONTH: "תקציב ל{month}",
   BUDGET_SAVED: "נשמר",
+  SUBCATEGORY_NAME: "שם תת קטגוריה",
+  ADDING: "הוספה",
+  SUBCATEGORIES_LOADING: "טוען תתי־קטגוריות...",
+  SUBCATEGORIES_EMPTY: "אין עדיין תתי־קטגוריות",
+  SUBCATEGORIES_LOAD_FAILED: "לא הצלחנו לטעון את תתי־הקטגוריות",
+  SUBCATEGORIES_RETRY: "ניסיון נוסף",
+  SUBCATEGORIES: "תתי־קטגוריות",
+  CATEGORY_DETAILS: "פרטי קטגוריה",
+  CATEGORY_NOT_FOUND: "הקטגוריה לא נמצאה",
+  CATEGORY_IS_ACTIVE: "פעילה",
+  CATEGORY_IS_INACTIVE: "לא פעילה",
+  INACTIVE_SUBCATEGORIES: "תתי־קטגוריות לא פעילות",
+  EDIT_SUBCATEGORY: "עריכת תת־קטגוריה",
 
   // ---- Settings ----
   PROFILE: "פרופיל",
@@ -229,6 +245,11 @@ export const strings = {
     CATEGORY_REQUIRED: "יש לבחור קטגוריה להוצאה",
     CATEGORY_INACTIVE: "הקטגוריה הושבתה",
     INVALID_CATEGORY: "הקטגוריה אינה קיימת",
+    SUBCATEGORY_NOT_FOUND: "תת־הקטגוריה לא נמצאה",
+    SUBCATEGORY_NAME_TAKEN: "כבר קיימת תת־קטגוריה בשם הזה בקטגוריה",
+    SUBCATEGORY_INACTIVE: "תת־הקטגוריה הושבתה",
+    INVALID_SUBCATEGORY: "תת־הקטגוריה אינה קיימת",
+    SUBCATEGORY_CATEGORY_MISMATCH: "תת־הקטגוריה אינה שייכת לקטגוריה שנבחרה",
     INVALID_PAYMENT_METHOD: "אמצעי התשלום אינו קיים",
     PAYMENT_METHOD_INACTIVE: "אמצעי התשלום הושבת",
     PAYMENT_METHOD_NAME_TAKEN: "כבר קיים אמצעי תשלום בשם הזה",
@@ -237,4 +258,10 @@ export const strings = {
     INTERNAL_ERROR: "אירעה שגיאה בשרת. נסו שוב מאוחר יותר.",
   } as Record<string, string>,
   API_ERROR_FALLBACK: "הפעולה נכשלה. נסו שוב.",
+
+  //Excel File Export
+  EXPORT_EXCEL: "ייצוא כל התנועות לאקסל",
+  EXPORTING_EXCEL: "מכינים את הקובץ...",
+  EXPORT_SHARING_UNAVAILABLE: "שיתוף קבצים אינו זמין במכשיר הזה",
+  EXPORT_INVALID_FILE: "התקבל קובץ לא תקין מהשרת",
 };

@@ -16,7 +16,11 @@ import {
   updateNamedSchema,
   updateTransactionSchema,
   upsertBudgetSchema,
+  createSubCategorySchema,
+  subCategoryListQuerySchema,
 } from "../validators/resourceValidators.js";
+import { exportTransactionsToExcel } from "../services/transactionExportService.js";
+
 
 export const categories = {
   list: (async (req, res) => {
@@ -33,6 +37,41 @@ export const categories = {
     const { id } = idParamsSchema.parse(req.params);
     const body = updateNamedSchema.parse(req.body);
     res.json(await catalogService.updateCategory(getHousehold(req), id, body));
+  }) satisfies RequestHandler,
+
+  recordSelection: (async (req, res) => {
+  const { id } = idParamsSchema.parse(req.params);
+  res.json(await catalogService.recordCategorySelection(getHousehold(req), id));
+}) satisfies RequestHandler,
+};
+
+export const subCategories = {
+  list: (async (req, res) => {
+    const query = subCategoryListQuerySchema.parse(req.query);
+    res.json(
+      await catalogService.listSubCategories(
+        getHousehold(req),
+        query.categoryId,
+        query.includeInactive ?? false,
+      ),
+    );
+  }) satisfies RequestHandler,
+
+  create: (async (req, res) => {
+    const body = createSubCategorySchema.parse(req.body);
+    res.status(201).json(
+      await catalogService.createSubCategory(
+        getHousehold(req),
+        body.categoryId,
+        body.name,
+      ),
+    );
+  }) satisfies RequestHandler,
+
+  update: (async (req, res) => {
+    const { id } = idParamsSchema.parse(req.params);
+    const body = updateNamedSchema.parse(req.body);
+    res.json(await catalogService.updateSubCategory(getHousehold(req), id, body));
   }) satisfies RequestHandler,
 };
 
@@ -92,6 +131,20 @@ export const createTransactionsController = (budgetAlerts: BudgetAlerts) => ({
     const { id } = idParamsSchema.parse(req.params);
     res.json(await transactionService.get(getHousehold(req), id));
   }) satisfies RequestHandler,
+  
+  exportExcel: (async (req, res) => {
+  const buffer = await exportTransactionsToExcel(getHousehold(req));
+
+  res.set({
+    "Content-Type":
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "Content-Disposition":
+      'attachment; filename="spendo-transactions.xlsx"',
+    "Cache-Control": "private, no-store",
+  });
+
+  res.status(200).send(buffer);
+  }) satisfies RequestHandler,
 
   create: (async (req, res) => {
     const body = createTransactionSchema.parse(req.body);
@@ -115,4 +168,5 @@ export const createTransactionsController = (budgetAlerts: BudgetAlerts) => ({
     await transactionService.remove(getHousehold(req), getAuth(req), id);
     res.status(204).end();
   }) satisfies RequestHandler,
+  
 });

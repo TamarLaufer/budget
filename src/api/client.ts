@@ -1,4 +1,5 @@
 import type { ApiErrorBody } from "../../shared/api";
+import { fetch as expoFetch } from "expo/fetch";
 
 /** Any failed API call. `status` is 0 when the server could not be reached. */
 export class ApiError extends Error {
@@ -106,4 +107,88 @@ export async function apiRequest<T>(
     throw new ApiError(response.status, "HTTP_ERROR", `Request failed with status ${response.status}`);
   }
   return payload as T;
+}
+
+/** Downloads a binary file, refreshing the Firebase token once on 401. */
+export async function apiDownload(path: string): Promise<Uint8Array> {
+  if (!config.baseUrl) {
+    throw new ApiError(
+      0,
+      "CONFIG_ERROR",
+      "EXPO_PUBLIC_API_URL is not configured",
+    );
+  }
+
+  const url = buildUrl(path);
+
+  const download = async (forceRefresh: boolean): Promise<Uint8Array> => {
+    const token = await config.getToken(forceRefresh);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 60_000);
+
+    try {
+      const response = await expoFetch(url, {
+        method: "GET",
+        headers: {
+          Accept: "application/octet-stream",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        let payload: unknown = null;
+
+        try {
+          payload = await response.json();
+        } catch {
+          // A proxy may return a non-JSON error response.
+        }
+
+        if (isApiErrorBody(payload)) {
+          throw new ApiError(
+            response.status,
+            payload.error.code,
+            payload.error.message,
+          );
+        }
+
+        throw new ApiError(
+          response.status,
+          "HTTP_ERROR",
+          `Download failed with status ${response.status}`,
+        );
+      }
+
+      return new Uint8Array(await response.arrayBuffer());
+    } catch (error) {
+      if (error instanceof ApiError) throw error;
+
+      if (controller.signal.aborted) {
+        throw new ApiError(
+          0,
+          "TIMEOUT",
+          "The download took too long to complete",
+        );
+      }
+
+      throw new ApiError(
+        0,
+        "NETWORK_ERROR",
+        error instanceof Error ? error.message : "Download failed",
+      );
+    } finally {
+      clearTimeout(timer);
+    }
+  };
+
+  try {
+    return await download(false);
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      return download(true);
+    }
+
+    throw error;
+  }
 }

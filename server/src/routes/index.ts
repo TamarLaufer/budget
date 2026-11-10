@@ -8,6 +8,7 @@ import {
   categories,
   createTransactionsController,
   paymentMethods,
+  subCategories,
 } from "../controllers/resourceControllers.js";
 import { authenticate } from "../middleware/authenticate.js";
 import { invitationRateLimit } from "../middleware/rateLimit.js";
@@ -71,6 +72,10 @@ export function createApiRouter(verifier: TokenVerifier, budgetAlerts: BudgetAle
   household.post("/categories", manager, categories.create);
   household.patch("/categories/:id", manager, categories.update);
 
+  household.get("/subcategories", subCategories.list);
+  household.post("/subcategories", manager, subCategories.create);
+  household.patch("/subcategories/:id", manager, subCategories.update);
+
   household.get("/payment-methods", paymentMethods.list);
   household.post("/payment-methods", manager, paymentMethods.create);
   household.patch("/payment-methods/:id", manager, paymentMethods.update);
@@ -81,6 +86,7 @@ export function createApiRouter(verifier: TokenVerifier, budgetAlerts: BudgetAle
   household.delete("/budgets/:id", manager, budgets.remove);
 
   household.get("/transactions", transactions.list);
+  household.get("/transactions/export", transactions.exportExcel);
   household.post("/transactions", transactions.create);
   household.get("/transactions/:id", transactions.get);
   household.patch("/transactions/:id", transactions.update);
