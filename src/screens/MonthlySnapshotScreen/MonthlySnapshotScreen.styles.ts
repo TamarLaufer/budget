@@ -5,16 +5,19 @@ import { colors, fontSize, radius, spacing } from "../../theme";
 export const SectionTitleContainer = styled.View`
   justify-content: center;
   align-items: center;
-  padding-top: ${spacing.md}px;
+  padding-top: ${spacing.lg}px;
 `;
 
-
-
 export const SectionTitle = styled.Text`
-  font-size: ${fontSize.secondHeading}px;
+  font-size: ${fontSize.heading}px;
   font-weight: 700;
   color: ${colors.text};
   margin-bottom: ${spacing.xs}px;
+`;
+
+/** Same spacing as the rows on the transactions screen. */
+export const RecentList = styled.View`
+  gap: ${spacing.sm}px;
 `;
 
 export const ShowAllPress = styled.Pressable`
@@ -62,4 +65,8 @@ export const IncomeValue = styled.Text<{ $color: string }>`
   color: ${({ $color }) => $color};
   text-align: center;
   flex-shrink: 1;
+`;
+
+export const RecentContent = styled.View`
+  gap: ${spacing.xs}px;
 `;

@@ -13,7 +13,7 @@ import { ChipGroup, type ChipOption } from "../ui/ChipGroup/ChipGroup";
 import { ErrorBanner } from "../ui/Feedback";
 import { Card } from "../ui/Layout";
 import { TextField } from "../ui/TextField";
-import { Field, FieldError, FieldLabel } from "./TransactionForm.styles";
+import { ButtonContainer, Field, FieldError, FieldLabel } from "./TransactionForm.styles";
 import { TransactionSubCategoryField } from "./TransactionSubCategoryField";
 import { useCategoryUsage } from "../../hooks/useCategoryUsage";
 
@@ -170,7 +170,9 @@ export function TransactionForm({
       ) : null}
 
       <ErrorBanner message={submitError} />
-      <Button label={submitting ? strings.SAVING : submitLabel} onPress={submit} loading={submitting} testID="submit-transaction" />
+      <ButtonContainer>
+        <Button label={submitting ? strings.SAVING : submitLabel} onPress={submit} loading={submitting} testID="submit-transaction" />
+      </ButtonContainer>
     </Card>
   );
 }

@@ -33,7 +33,9 @@ export function list(householdId: string, filter: TransactionFilter, db: Db = ge
   return db.transaction.findMany({
     where,
     include: withCreator,
-    orderBy: [{ transactionDate: "desc" }, { createdAt: "desc" }],
+    // Newest first with a unique tie-breaker, so the first TRANSACTION_LIST_LIMIT rows are always
+    // the newest ones and match the app's sort (compareTransactions in transactionsSlice).
+    orderBy: [{ transactionDate: "desc" }, { createdAt: "desc" }, { id: "desc" }],
     take: TRANSACTION_LIST_LIMIT,
   });
 }

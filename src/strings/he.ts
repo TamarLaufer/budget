@@ -111,6 +111,8 @@ export const strings = {
   // ---- Transactions ----
   NO_TRANSACTIONS: "אין תנועות בחודש הזה",
   NO_MATCHING_TRANSACTIONS: "אין תנועות שתואמות לסינון",
+  RECENT_TRANSACTIONS: "תנועות אחרונות",
+  VIEW_ALL_TRANSACTIONS: "לכל התנועות",
   SEARCH: "חיפוש",
   ALL: "הכל",
   TYPE_EXPENSE: "הוצאה",

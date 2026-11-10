@@ -70,7 +70,17 @@ export default function TransactionsScreen() {
   const subCategories = useAppSelector(subCategorySelectors.selectAll);
 
   const [filters, setFilters] = useState<TransactionFilters>(noFilters);
-  const query = useDebouncedValue(filters.query);
+  const debouncedQuery = useDebouncedValue(filters.query);
+  // Clearing the search applies at once; only typing waits for the debounce.
+  const query = filters.query ? debouncedQuery : "";
+
+  // Another screen asked for the full list (e.g. the dashboard's "View all"): clear the filters.
+  const filtersResetRequests = useAppSelector((s) => s.transactions.filtersResetRequests);
+  const [handledResetRequests, setHandledResetRequests] = useState(filtersResetRequests);
+  if (handledResetRequests !== filtersResetRequests) {
+    setHandledResetRequests(filtersResetRequests);
+    setFilters(noFilters);
+  }
 
   const categoryNames = useMemo(
     () => new Map(categories.map((c) => [c.id, c.name])), 

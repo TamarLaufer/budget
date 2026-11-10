@@ -1,5 +1,5 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 
 import { errorMessage } from "../../api/errorMessage";
 import { formatAgorot } from "../../budget/money";
@@ -16,11 +16,13 @@ import {
 } from "../../components/ui/Feedback";
 import { ScrollScreen } from "../../components/ui/Layout";
 import { useScreenData } from "../../hooks/useScreenData";
+import { useSubCategoriesForTransactions } from "../../hooks/useSubCategoriesForTransactions";
 import { useSelectedCategory } from "../../hooks/useSelectedCategory";
 import { useAppDispatch, useAppSelector } from "../../store";
 import {
   selectCanManage,
   selectDashboard,
+  selectRecentTransactionsForPeriod,
   selectSnapshotCategoriesInDisplayOrder,
   type Dataset,
 } from "../../store/selectors";
@@ -36,6 +38,7 @@ import {
   ShowAllPress,
   ShowAllText,
 } from "./MonthlySnapshotScreen.styles";
+import { RecentTransactions } from "./RecentTransactions";
 import { formatCurrency } from "@/functions/assets";
 
 /** What this screen shows; loaded when missing, stale or past the freshness limit. */
@@ -48,14 +51,22 @@ const MonthlySnapshotScreen = () => {
   const dashboard = useAppSelector(selectDashboard);
   const categories = useAppSelector(selectSnapshotCategoriesInDisplayOrder);
   const canManage = useAppSelector(selectCanManage);
+  const recentTransactions = useAppSelector(selectRecentTransactionsForPeriod);
+  const { retryFailed: retrySubCategories } = useSubCategoriesForTransactions(recentTransactions);
   const { snapshot } = dashboard;
+
+  // An explicit refresh also retries subcategory names that failed to load; nothing else does.
+  const refreshAll = useCallback(() => {
+    refresh();
+    retrySubCategories();
+  }, [refresh, retrySubCategories]);
 
   const { categorySetState, selectedCategoryId, clearSelectedId } =
     useSelectedCategory();
   const [showOverBudgetOnly, setShowOverBudgetOnly] = useState(false);
 
   if (!load.loaded && load.status === "failed") {
-    return <ErrorView message={errorMessage(load.error)} onRetry={refresh} />;
+    return <ErrorView message={errorMessage(load.error)} onRetry={refreshAll} />;
   }
   if (!load.loaded) return <LoadingView />;
 
@@ -81,8 +92,9 @@ const MonthlySnapshotScreen = () => {
     <ScrollScreen
       withTopInset
       refreshing={refreshing}
-      onRefresh={refresh}
+      onRefresh={refreshAll}
       avoidKeyboard
+      testID="monthly-snapshot"
     >
       <Header
         month={periodToDate(period)}
@@ -93,7 +105,7 @@ const MonthlySnapshotScreen = () => {
       {/* Stale data stays visible when a background refresh fails. */}
       <ErrorBanner
         message={load.status === "failed" ? errorMessage(load.error) : null}
-        onRetry={refresh}
+        onRetry={refreshAll}
       />
 
       <BudgetSummary totals={snapshot.totals} />
@@ -116,6 +128,8 @@ const MonthlySnapshotScreen = () => {
         onPress={() => router.push("/transaction/new")}
         testID="add-transaction"
       />
+
+      <RecentTransactions transactions={recentTransactions} />
 
       <SectionTitleContainer>
         <SectionTitle accessibilityRole="header">

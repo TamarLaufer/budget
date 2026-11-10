@@ -154,6 +154,24 @@ describe("transaction listing and filters", () => {
     expect((await list(owner, "?q=salary")).map((t) => t.type)).toEqual(["INCOME"]);
   });
 
+  it("orders newest first by date, then creation time, then id, as the app does", async () => {
+    const { owner, food } = await setup();
+    const ids: string[] = [];
+    for (let i = 0; i < 4; i++) {
+      ids.push(((await create(owner, expense(food.id, { transactionDate: "2026-10-15" }))).body as TransactionDto).id);
+    }
+    const later = ((await create(owner, expense(food.id, { transactionDate: "2026-10-20" }))).body as TransactionDto).id;
+    // Three exact ties on date and creation time, and one created later the same day.
+    const [newer, ...tied] = ids as [string, ...string[]];
+    await getPrisma().transaction.updateMany({ where: { id: { in: tied } }, data: { createdAt: new Date("2026-10-15T08:00:00.000Z") } });
+    await getPrisma().transaction.update({ where: { id: newer }, data: { createdAt: new Date("2026-10-15T09:00:00.000Z") } });
+
+    // Ties fall back to descending id in code-unit order (compareTransactions in the app).
+    const tiedDescending = [...tied].sort((a, b) => (a < b ? 1 : a > b ? -1 : 0));
+    const listed = await list(owner, "?year=2026&month=10");
+    expect(listed.map((t) => t.id)).toEqual([later, newer, ...tiedDescending]);
+  });
+
   it("rejects invalid filters", async () => {
     const { owner } = await setup();
     for (const query of ["?month=10", "?year=2026&month=0", "?type=TRANSFER", "?categoryId=abc", "?year=abc"]) {

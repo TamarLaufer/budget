@@ -21,6 +21,7 @@ import {
 } from "../../store/selectors";
 import { createTransaction, deleteTransaction, updateTransaction } from "../../store/slices/transactionsSlice";
 import { strings } from "../../strings/he";
+import { ButtonContainer } from "./TransacionEditorScreens.styles";
 
 /** The form's choices; loaded when missing, stale or past the freshness limit. */
 const DATASETS: readonly Dataset[] = ["categories", "paymentMethods"];
@@ -97,7 +98,7 @@ export function EditTransactionScreen() {
 
   if (!transaction) {
     return (
-      <ScrollScreen>
+      <ScrollScreen avoidKeyboard>
         <Stack.Screen options={{ title: strings.EDIT_TRANSACTION }} />
         <EmptyState title={strings.TRANSACTION_NOT_FOUND} />
       </ScrollScreen>
@@ -139,7 +140,7 @@ export function EditTransactionScreen() {
   };
 
   return (
-    <ScrollScreen>
+    <ScrollScreen avoidKeyboard>
       <Stack.Screen options={{ title: strings.EDIT_TRANSACTION }} />
       {canModify ? null : <ErrorBanner message={strings.API_ERRORS.INSUFFICIENT_ROLE ?? null} />}
       <TransactionForm
@@ -151,7 +152,9 @@ export function EditTransactionScreen() {
         submitError={error}
       />
       {canModify ? (
-        <Button label={strings.DELETE} variant="danger" onPress={confirmDelete} loading={deleting} />
+        <ButtonContainer>
+          <Button label={strings.DELETE} variant="danger" onPress={confirmDelete} loading={deleting} />
+        </ButtonContainer>
       ) : null}
     </ScrollScreen>
   );

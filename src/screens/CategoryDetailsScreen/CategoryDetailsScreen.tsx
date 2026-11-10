@@ -1,53 +1,95 @@
 import { Stack, useLocalSearchParams } from "expo-router";
 
 import { errorMessage } from "../../api/errorMessage";
-import { EmptyState, ErrorView, InfoBanner, LoadingView } from "../../components/ui/Feedback";
+import {
+  EmptyState,
+  ErrorBanner,
+  ErrorView,
+  InfoBanner,
+  LoadingView,
+} from "../../components/ui/Feedback";
 import { ScrollScreen, SectionTitle } from "../../components/ui/Layout";
 import { useScreenData } from "../../hooks/useScreenData";
 import { useAppSelector } from "../../store";
-import { categorySelectors, selectCanManage, type Dataset } from "../../store/selectors";
+import {
+  categorySelectors,
+  selectBudgetsForPeriod,
+  selectCanManage,
+  type Dataset,
+} from "../../store/selectors";
 import { strings } from "../../strings/he";
 import { CategorySettingsCard } from "./CategorySettingsCard";
 import { SubCategoriesCard } from "./SubCategoriesCard";
+import { BudgetRow } from "@/components/BudgetRow/BudgetRow";
+import { Text, View } from "react-native";
 
-/** Needed to resolve the category from its id (e.g. when opened from a deep link). */
-const DATASETS: readonly Dataset[] = ["categories"];
+const DATASETS: readonly Dataset[] = ["categories", "budgets"];
 
-/**
- * Details of one category, opened from the Categories tab with only its id in the route. The
- * category itself is read from Redux, so changes made here are already in the list on return.
- */
 export function CategoryDetailsScreen() {
   const params = useLocalSearchParams<{ id: string }>();
-  // At runtime a param can be missing or repeated (?id=a&id=b); accept only a single non-empty id.
-  const id = typeof params.id === "string" && params.id.trim() !== "" ? params.id : null;
+  const id =
+    typeof params.id === "string" && params.id.trim() !== ""
+      ? params.id
+      : null;
 
-  const { load, refresh } = useScreenData(DATASETS);
-  const category = useAppSelector((s) => (id ? categorySelectors.selectById(s, id) : undefined));
+  const { period, load, refresh, refreshing } = useScreenData(DATASETS);
+
+  const category = useAppSelector((s) =>
+    id ? categorySelectors.selectById(s, id) : undefined,
+  );
+  const budgets = useAppSelector(selectBudgetsForPeriod);
   const canManage = useAppSelector(selectCanManage);
 
-  const title = <Stack.Screen options={{ title: category?.name ?? strings.CATEGORY_DETAILS }} />;
+  if (!load.loaded && load.status === "failed") {
+    return <ErrorView message={errorMessage(load.error)} onRetry={refresh} />;
+  }
+
+  if (!load.loaded) return <LoadingView />;
 
   if (!category) {
-    // "Not found" only once the categories have actually loaded without it.
-    if (id && load.status === "failed") return <ErrorView message={errorMessage(load.error)} onRetry={refresh} />;
-    if (id && load.status !== "succeeded") return <LoadingView />;
     return (
       <ScrollScreen>
-        {title}
+        <Stack.Screen options={{ title: strings.CATEGORY_DETAILS }} />
         <EmptyState title={strings.CATEGORY_NOT_FOUND} />
       </ScrollScreen>
     );
   }
 
-  return (
-    <ScrollScreen avoidKeyboard>
-      {title}
-      {canManage ? null : <InfoBanner message={strings.MANAGERS_ONLY} />}
-      <CategorySettingsCard category={category} canManage={canManage} />
+  const budget = budgets.find((item) => item.categoryId === category.id);
 
-      <SectionTitle>{strings.SUBCATEGORIES}</SectionTitle>
-      <SubCategoriesCard categoryId={category.id} canManage={canManage} />
+  return (
+    <ScrollScreen
+      avoidKeyboard
+      refreshing={refreshing}
+      onRefresh={refresh}
+    >
+      <Stack.Screen options={{ title: category.name }} />
+
+      <ErrorBanner
+        message={load.status === "failed" ? errorMessage(load.error) : null}
+        onRetry={refresh}
+      />
+
+      {canManage ? null : <InfoBanner message={strings.MANAGERS_ONLY} />}
+
+      <CategorySettingsCard category={category} canManage={canManage} />
+      <View style={{paddingLeft: 8, marginTop: 10}}>
+        <Text style={{fontSize: 18, fontWeight: 700 }}>{strings.BUDGET}</Text>
+      </View>
+      <BudgetRow
+        key={`${category.id}:${period.year}-${period.month}`}
+        category={category}
+        period={period}
+        budget={budget}
+        canManage={canManage}
+      />
+      <View style={{paddingLeft: 8, marginTop: 10}}>
+        <Text style={{fontSize: 18, fontWeight: 700 }}>{strings.SUBCATEGORIES}</Text>
+      </View>
+      <SubCategoriesCard
+        categoryId={category.id}
+        canManage={canManage}
+      />
     </ScrollScreen>
   );
 }

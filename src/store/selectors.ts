@@ -45,6 +45,17 @@ export const selectTransactionsForPeriod = createSelector(
   (transactions, period) => transactions.filter((t) => isDateInPeriod(t.transactionDate, period)),
 );
 
+/** How many of the month's newest transactions the dashboard shows. */
+export const RECENT_TRANSACTIONS_LIMIT = 3;
+
+/**
+ * The selected month's newest transactions (income and expenses). The list is already sorted
+ * newest first, so this takes a copy of its head and never sorts or mutates store arrays.
+ */
+export const selectRecentTransactionsForPeriod = createSelector([selectTransactionsForPeriod], (transactions) =>
+  transactions.slice(0, RECENT_TRANSACTIONS_LIMIT),
+);
+
 export const selectBudgetsForPeriod = createSelector(
   [budgetSelectors.selectAll, selectPeriod],
   (budgets, period) => budgets.filter((b) => b.year === period.year && b.month === period.month),
